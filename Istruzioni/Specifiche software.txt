@@ -1,0 +1,69 @@
+🧠 MAPPA MENTALE ARCHITETTURALE: TOUCH WELNESS
+1. 🗺️ Flusso delle Funzioni e Intersezioni dei File
+Il sistema si muove attraverso una gerarchia rigida, partendo dall'accesso fino all'interazione a schermo.
+
+Plaintext
+[UTENTE / BROWSER]
+       │
+       ▼
+[ 1. FASE DI AVVIO & ROUTING ] 
+       │ (File: index.html / boot.js / router.js)
+       ├──> Smart Boot: Legge la Cache Locale per avvio fulmineo.
+       └──> Smart Routing: Rileva il device (Desktop/Mobile) e lo stato di Login.
+              │
+              ├──> [Desktop] -> Carica Layout Esteso 
+              └──> [Mobile]  -> Carica Panoramica Fluida Mobile
+                     │
+                     ▼
+[ 2. MOTORE CORE (Dietro le quinte) ]
+       │ (File: core.js / math.js / eventDelegation.js)
+       ├──> Pre-calcolo Matematico: Esegue conversioni orarie (tToM, mToT) in background.
+       ├──> Event Delegation Globale: Unico "ascoltatore" per click (mouse) e touch (dito).
+       └──> Rendering a Delta: Aggiorna solo il nodo DOM modificato, nessuna ricarica pagina.
+                     │
+                     ▼
+[ 3. INTERAZIONE AGENDA & CABINE ]
+       │ (File: agenda.js / dragDrop.js / collision.js)
+       ├──> Gestione Trattamenti: Inserimento e modifica slot.
+       ├──> Punto 6 - Blocco Area Interattivo: 
+       │      └─> Hold 3 sec su spazio vuoto -> Crea blocco temporaneo (Rosso) -> Resize/Drag -> Conferma (Blu).
+       └──> Gestione Collisioni:
+              ├─> Sovrascrittura su Trattamento / Blocco Blu: NEGATA (Muro di gomma).
+              └─> Sovrascrittura su Pulizia (10 min ombra): ATTIVA Pop-up (Annulla o Forza).
+2. 🗄️ Architettura e Salvataggio dei Dati (Flusso Cloud & Local)
+Il salvataggio e la sincronizzazione dei dati avvengono su tre livelli distinti per garantire che l'ecosistema non perda mai un'informazione e rimanga performante.
+
+🔴 LIVELLO 1: Firebase (Il Cuore in Tempo Reale)
+Firebase è il database principale (solitamente Realtime Database o Firestore). È qui che risiede la "verità assoluta" del gestionale.
+
+Cosa salva:
+
+Tutti gli slot degli appuntamenti (ID cliente, orario inizio/fine, cabina, operatore).
+
+Stato dei Blocchi Area Interattivi (le zone blu protette create nel Punto 6).
+
+Stato delle Cabine e anagrafiche.
+
+Come interagisce: I file JavaScript inviano pacchetti JSON a Firebase ogni volta che si conferma un'azione (es. quando il blocco rosso diventa blu, o si forza la sovrascrittura di una pulizia). Firebase spinge l'aggiornamento a tutti i dispositivi connessi tramite il Rendering a Delta.
+
+🟡 LIVELLO 2: Google & Apps Script (Il Ponte Operativo)
+Google Apps Script (GAS) agisce come un server backend invisibile integrato nell'ecosistema Google Workspace.
+
+Cosa gestisce:
+
+Sincronizzazioni esterne: Funge da ponte se Touch Welness deve dialogare con fogli Google Sheets (es. per reportistica estesa) o con Google Calendar.
+
+Automazioni (Trigger): Script programmati che possono girare di notte per pulire dati vecchi, inviare email di riepilogo giornaliero alla direzione, o elaborare logiche pesanti che affaticherebbero l'applicazione frontend.
+
+Dove risiede: Sul cloud di Google, collegato agli account e ai file Drive del progetto. Viene richiamato dai tuoi file JavaScript tramite chiamate API (fetch).
+
+🟢 LIVELLO 3: Local Storage / Session Cache (La Memoria Veloce)
+Questo è il salvataggio dei dati direttamente sul dispositivo fisico (PC della SPA o Smartphone).
+
+Cosa salva:
+
+Dati dello Smart Boot: Informazioni di login, preferenze di visualizzazione (es. ultima vista mobile aperta).
+
+Pre-calcoli strutturali: Risultati delle conversioni matematiche tToM per evitare che la CPU del telefono debba ricalcolare ogni volta la griglia oraria durante lo scroll della Panoramica Mobile.
+
+Perché è fondamentale: Permette al sistema di caricare l'interfaccia istantaneamente ancor prima che Firebase abbia finito di scaricare gli appuntamenti aggiornati, eliminando le schermate bianche di caricamento (zero errori 404).

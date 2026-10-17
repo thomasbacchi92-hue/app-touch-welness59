@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Touch Welness Firma</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        body { background: #0f172a; color: white; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        
+        /* SCHERMATA DEL CONTRATTO INTERATTIVO (SCROLLABILE) */
+        #interactiveContract { display: none; flex-direction: column; width: 100%; height: 100%; background: #ffffff; color: #0f172a; animation: slideUp 0.3s ease; position: fixed; top: 0; left: 0; z-index: 100; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        .contract-scroll-area { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 50px; }
+
+        /* Stile del Documento Caricato */
+        .doc-segment { margin-bottom: 30px; background: #ffffff; padding: 20px; border: none; box-shadow: none; color: #000; }
+        
+        /* CANVAS AREA NELLA STESSA PAGINA */
+        .canvas-section { background: white; padding: 20px; border-radius: 12px; border: 2px solid #38bdf8; text-align: center; margin-top:20px; }
+        .canvas-area { width: 100%; height: 250px; border: 2px dashed #94a3b8; border-radius: 8px; position: relative; overflow: hidden; touch-action: none; margin: 15px 0; background: #ffffff; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+        
+        .contract-bottom-bar { background: #1e293b; padding: 15px; display: flex; gap: 10px; flex-shrink: 0; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); }
+        
+        .btn { flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: 900; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.2s; }
+        .btn:active { transform: scale(0.95); }
+        .btn-purple { background: #a855f7; color: white; }
+        .btn-green { background: #10b981; color: white; }
+        .btn-outline { background: transparent; border: 1px solid #cbd5e1; color: #64748b; }
+        .btn-outline-dark { background: transparent; border: 1px solid #334155; color: white; }
+
+        #loginScreen { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 300px; }
+        .login-input { padding: 15px; border-radius: 12px; border: 1px solid #334155; background: #1e293b; color: white; outline: none; font-size: 16px; width: 100%; box-sizing: border-box; text-align: center;}
+
+        /* POP-UP ELEGANTE (TOAST) */
+        #toastBlue { visibility: hidden; min-width: 250px; background: #38bdf8; color: #0f172a; text-align: center; border-radius: 12px; padding: 16px; position: fixed; z-index: 10001; left: 50%; transform: translateX(-50%); top: 20px; font-size: 14px; font-weight: bold; opacity: 0; transition: 0.4s; box-shadow: 0 10px 20px rgba(0,0,0,0.5);}
+        #toastBlue.show { visibility: visible; opacity: 1; top: 40px; }
+        #toastBlue.error { background: #ef4444; color: white; }
+    </style>
+</head>
+<body>
+
+<div id="toastBlue">
+    <i class="material-icons-round" id="toastIcon" style="vertical-align:middle; margin-right:5px">info</i> 
+    <span id="toastMsg"></span>
+</div>
+
+<div class="content" id="mainContent">
+    <div id="loginScreen">
+        <h3 style="margin-top:0; color:#94a3b8;">Collega Dispositivo</h3>
+        <input type="text" id="strId" class="login-input" placeholder="ID Struttura (es. SPA_01)" autocomplete="off">
+        <button class="btn btn-purple" onclick="effettuaLogin()">ACCEDI</button>
+    </div>
+
+    <!-- Schermata di attesa minimale -->
+    <div id="waitScreen" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+        <h1 style="margin: 0; color: #a855f7; font-size: 32px; text-transform: uppercase; letter-spacing: 2px;">Touch Welness</h1>
+        <span style="font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 4px; margin-top: 5px;">Documenti</span>
+    </div>
+</div>
+
+<div id="interactiveContract">
+    <div class="contract-scroll-area">
+        <div id="icDocsContainer"></div>
+        <div class="canvas-section">
+            <h3 style="margin-top:0; color:#0f172a;">Apponi la tua Firma</h3>
+            <p style="font-size: 12px; color: #64748b;">Firma all'interno del riquadro bianco per confermare l'accettazione dei documenti e la veridicità dei dati forniti.</p>
+            <div class="canvas-area"><canvas id="sigCanvas"></canvas></div>
+            <button class="btn btn-outline" style="width:auto; padding: 8px 20px; margin: 0 auto;" onclick="pulisciFirma()"><i class="material-icons-round">delete_sweep</i> Pulisci Firma</button>
+        </div>
+    </div>
+    <div class="contract-bottom-bar">
+        <button class="btn btn-outline-dark" onclick="chiudiFirma(true)">ANNULLA</button>
+        <button class="btn btn-green" id="btnSendSig" onclick="inviaContratto()"><i class="material-icons-round">check_circle</i> INVIA ALLA RECEPTION</button>
+    </div>
+</div>
+
+<script>
+    const fbConfig = {
+        apiKey: "AIzaSyCrDuK7SWHdbzrJR-pNpxmRwGnZgV2Dd2Y",
+        authDomain: "touch-welness-massage.firebaseapp.com",
+        databaseURL: "https://touch-welness-massage-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "touch-welness-massage",
+        storageBucket: "touch-welness-massage.firebasestorage.app"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+
+    let currentAppId = null; let currentDate = null; let currentDocs = [];
+    let canvas, ctx, isDrawing = false;
+
+    function showToast(msg, isError = false) {
+        const t = document.getElementById("toastBlue");
+        if(!t) return;
+        document.getElementById("toastMsg").innerText = msg;
+        if(isError) {
+            t.classList.add("error");
+            document.getElementById("toastIcon").innerText = "error";
+        } else {
+            t.classList.remove("error");
+            document.getElementById("toastIcon").innerText = "info";
+        }
+        t.classList.add("show");
+        setTimeout(() => { t.classList.remove("show"); }, 3000);
+    }
+
+    function checkAutoLogin() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        if (code) {
+            firebase.database().ref(`MASTER_ADMIN_DB/firma_links/${code}`).once('value').then(snap => {
+                const sId = snap.val();
+                if (sId) {
+                    localStorage.setItem('tw_firma_sid', sId);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    avviaSessione(sId);
+                } else {
+                    showToast("Link di accesso rapido non valido o scaduto.", true);
+                    avviaSessione(localStorage.getItem('tw_firma_sid'));
+                }
+            }).catch(err => {
+                showToast("Errore di connessione.", true);
+                avviaSessione(localStorage.getItem('tw_firma_sid'));
+            });
+        } else {
+            avviaSessione(localStorage.getItem('tw_firma_sid'));
+        }
+    }
+
+    function avviaSessione(sId) {
+        if(sId) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('waitScreen').style.display = 'flex';
+            iniziaAscolto(sId);
+        } else {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('waitScreen').style.display = 'none';
+        }
+    }
+
+    function effettuaLogin() {
+        const s = document.getElementById('strId').value.trim();
+        if(!s) return showToast("Inserisci l'ID della Struttura!", true);
+        localStorage.setItem('tw_firma_sid', s); 
+        showToast("Accesso Riuscito!");
+        avviaSessione(s); 
+    }
+
+    function esci() { 
+        localStorage.removeItem('tw_firma_sid'); 
+        window.history.replaceState({}, document.title, window.location.pathname);
+        window.location.reload(); 
+    }
+
+    function iniziaAscolto(sId) {
+        firebase.database().ref(`MASTER_ADMIN_DB/structures_data/${sId}/device_sync/tablet`).on('value', snap => {
+            const data = snap.val();
+            
+            if(data && data.status === 'pending') {
+                currentAppId = data.appId;
+                currentDate = data.date;
+                currentDocs = data.docs || []; 
+                
+                let docsHtml = "";
+                currentDocs.forEach((doc, index) => { 
+                    let contentFixed = doc.content.replace(/&#9744;/g, '☐').replace(/&#9745;/g, '☑');
+                    docsHtml += `<div class="doc-segment" data-index="${index}">${contentFixed}</div>`;
+                });
+                document.getElementById('icDocsContainer').innerHTML = docsHtml;
+
+                // Inizializza le caselle di controllo personalizzate per mantenere lo sfondo bianco
+                setTimeout(() => {
+                    document.querySelectorAll('.doc-segment td, .doc-segment div').forEach(el => {
+                        if(el.innerHTML.includes('☐') || el.innerHTML.includes('☑')) {
+                            el.style.cursor = 'pointer';
+                            el.style.transition = '0.2s';
+                            el.addEventListener('click', function(e) {
+                                if(this.innerHTML.includes('☐')) {
+                                    this.innerHTML = this.innerHTML.replace('☐', '<b style="color:#10b981; font-size:14px;">☑</b>');
+                                    this.style.background = 'transparent'; 
+                                } else if(this.innerHTML.includes('☑')) {
+                                    this.innerHTML = this.innerHTML.replace('<b style="color:#10b981; font-size:14px;">☑</b>', '☐').replace('☑', '☐');
+                                    this.style.background = 'transparent';
+                                }
+                            });
+                        }
+                    });
+                }, 100);
+
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('interactiveContract').style.display = 'flex';
+                
+                const btn = document.getElementById('btnSendSig');
+                btn.innerHTML = '<i class="material-icons-round">check_circle</i> INVIA ALLA RECEPTION';
+                btn.disabled = false;
+
+                setTimeout(initCanvas, 300);
+                
+            } else if (data && data.status === 'review') {
+                document.getElementById('interactiveContract').style.display = 'none'; 
+                document.getElementById('mainContent').style.display = 'flex';
+                document.getElementById('waitScreen').style.display = 'flex';
+                document.getElementById('loginScreen').style.display = 'none';
+            } else if (!data || data.status === 'completed' || data.status === 'idle') {
+                chiudiFirma(false);
+            }
+        });
+    }
+
+    function chiudiFirma(forceIdle = false) { 
+        document.getElementById('interactiveContract').style.display = 'none'; 
+        document.getElementById('mainContent').style.display = 'flex';
+        document.getElementById('waitScreen').style.display = 'flex';
+        document.getElementById('loginScreen').style.display = 'none';
+        
+        pulisciFirma();
+
+        if (forceIdle) {
+            const sId = localStorage.getItem('tw_firma_sid');
+            firebase.database().ref(`MASTER_ADMIN_DB/structures_data/${sId}/device_sync/tablet`).update({ status: 'idle' });
+        }
+    }
+
+    function initCanvas() {
+        canvas = document.getElementById('sigCanvas');
+        ctx = canvas.getContext('2d');
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width; canvas.height = rect.height;
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a';
+        
+        const getPos = (e) => { const rect = canvas.getBoundingClientRect(); const evt = e.touches ? e.touches[0] : e; return { x: evt.clientX - rect.left, y: evt.clientY - rect.top }; };
+        const startDraw = (e) => { isDrawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); };
+        const draw = (e) => { if(!isDrawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); };
+        const stopDraw = () => { isDrawing = false; ctx.closePath(); };
+        
+        canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDraw); canvas.addEventListener('mouseout', stopDraw);
+        canvas.addEventListener('touchstart', startDraw, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDraw);
+    }
+
+    function pulisciFirma() { if(ctx) { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); } }
+
+    function inviaContratto() {
+        const btn = document.getElementById('btnSendSig'); 
+        btn.innerHTML = '<i class="material-icons-round">sync</i> INVIO IN RECEPTION...'; btn.disabled = true;
+        const base64 = canvas.toDataURL();
+        const sId = localStorage.getItem('tw_firma_sid');
+        
+        document.querySelectorAll('.doc-segment').forEach(segment => {
+            let idx = segment.getAttribute('data-index');
+            if(idx !== null) currentDocs[idx].content = segment.innerHTML;
+        });
+
+        firebase.database().ref(`MASTER_ADMIN_DB/structures_data/${sId}/device_sync/tablet`).update({
+            status: 'review',
+            signature: base64,
+            docs: currentDocs
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', checkAutoLogin);
+</script>
+</body>
+</html>

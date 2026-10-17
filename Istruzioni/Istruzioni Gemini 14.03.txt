@@ -1,0 +1,150 @@
+📘 TOUCH WELNESS: MANUALE DI ARCHITETTURA E SISTEMA
+Tipologia Software: Cloud-Based Multi-Tenant SPA Management System (SaaS Architecture)
+Infrastruttura: Frontend Vanilla (HTML5, CSS3, JS) + Backend Serverless (Firebase Realtime Database)
+Aggiornamento: Versione Enterprise (Con Motore UI Data-Driven e Automazione DOM)
+
+🗺️ 1. MAPPA DEL SITO (SITE MAP GLOBALE)
+Il software è diviso in 3 Ecosistemi principali totalmente isolati ma comunicanti in tempo reale:
+
+A. ECOSISTEMA MASTER ADMIN (Pannello Direzionale)
+admin.html (Entry point)
+
+Dashboard: Statistiche e grafici.
+
+Strutture & Licenze: Creazione e gestione centri fisici.
+
+Chat Network: Comunicazione globale.
+
+Opzioni (Sottomenu):
+
+Anagrafica Clienti (CRM Globale)
+
+Trattamenti Master (Catalogo servizi)
+
+Collaboratori (Gestione HR e Finanze)
+
+Documenti (Archivio template PDF/Privacy)
+
+Template WhatsApp (Generatore messaggi multilingua)
+
+Opzioni Tema
+
+B. ECOSISTEMA CLIENT SPA (Pannello Operativo di Reception)
+index.html (Entry point) -> Agenda Cabine (Vista giornaliera Drag&Drop)
+
+index.html?view=crm -> CRM Locale SPA (Profili, Storico, Patologie)
+
+Archivio/Lista.html -> Lista Appuntamenti (Archivio tabellare filtrabile)
+
+Piscina/Piscina_GUI.html -> Piscina e SPA (Gestione ingressi generici)
+
+chat.html -> Chat e Gruppi (Comunicazione interna alla filiale)
+
+Area_Riservata.html -> Area Personale Operatore (Fatturato e Provvigioni)
+
+Template.html -> Bacheca Template Messaggi (Sola lettura)
+
+Gestione.html -> Impostazioni di Sistema (Cabine, Motore UI, Auth)
+
+C. ECOSISTEMA TABLET (Interfaccia Cliente)
+Tablet.html / Modulo Sync -> Area Firma (Ricezione contratti, compilazione, check e firma touch).
+
+⚙️ 2. ANALISI DELLE FUNZIONI: COSA PUOI FARE E COME FUNZIONA
+Di seguito l'analisi dettagliata modulo per modulo. Ogni sezione contiene la logica tecnica, la spiegazione umana e lo spunto aziendale (Insight).
+
+🏛️ MODULO 1: MASTER ADMIN (La Centrale di Controllo)
+1. Dashboard & Statistiche
+
+Umanamente: Il cruscotto dove vedi quanto sta incassando ogni singola SPA, quanti massaggi fanno e quali operatori lavorano meglio.
+
+Tecnicamente: Algoritmo di aggregazione dati asincrono che legge i nodi /app/ di ogni structure_id e calcola i KPI (Key Performance Indicators) incrociandoli con le anagrafiche operatori.
+
+💡 Spunto Aziendale: Ideale per decidere dove investire in marketing (es. se una filiale ha troppi buchi vuoti) o per premiare l'operatore più produttivo.
+
+2. Gestione HR & Commissioni (Collaboratori)
+
+Umanamente: Crei i profili per i tuoi massaggiatori. Decidi in quale SPA lavorano, crei le loro password e imposti le loro provvigioni (es. Fisso + 20% sui massaggi).
+
+Tecnicamente: Generazione di nodi utente in /users/ con parametri finanziari isolati. I dati di calcolo provvigione sono inaccessibili dalla Reception, visibili solo in Area Riservata con la password corretta.
+
+💡 Spunto Aziendale: Automatizza il calcolo delle buste paga a fine mese.
+
+3. Motore Template WhatsApp
+
+Umanamente: Crei i testi dei messaggi (es. promemoria o ringraziamento) e usi delle "paroline magiche" (Tag) come {{NOME}}. Poi decidi a quali SPA inviare questi modelli.
+
+Tecnicamente: Generazione di payload JSON inviati in multicast ai nodi templates/it ed en delle strutture selezionate.
+
+💡 Spunto Aziendale: Garantisce che tutte le tue receptionist comunichino con i clienti con lo stesso tono di voce professionale, senza errori grammaticali.
+
+4. Gestione Documenti Master
+
+Umanamente: Carichi il testo della Privacy o del Consenso Informato. Il software lo prepara per i tablet di tutte le filiali.
+
+Tecnicamente: Motore di conversione Testo-to-HTML che salva i template nei database dei clienti, pronti per essere iniettati dal DeviceSync.js.
+
+🛎️ MODULO 2: CLIENT SPA (Il Cuore Operativo)
+1. Agenda Cabine (Grid & Drag&Drop)
+
+Umanamente: Il tabellone giornaliero. Clicchi su uno spazio vuoto e si apre la tendina laterale per inserire il cliente. Se il cliente sposta l'orario, prendi il blocco col mouse e lo trascini dove vuoi.
+
+Tecnicamente: Griglia generata in loop basandosi su Array di slot (10 minuti). Il Drag&Drop intercetta le collisioni temporali calcolando la durata (tToM -> time to minutes) impedendo sovrapposizioni nella stessa cabina.
+
+💡 Spunto Aziendale: Elimina la carta, azzera gli errori di overbooking e permette di cambiare i turni in 1 secondo senza cancellare col bianchetto.
+
+2. Modulo Prenotazione (Sidebar) con UI "Data-Driven"
+
+Umanamente: La scheda dove scrivi nome, telefono, trattamento. La grande innovazione è che i campi di questa scheda possono sparire o apparire a piacimento se li disattivi dalle Impostazioni, per avere una schermata pulitissima. Contiene anche il tasto per segnare le note mediche.
+
+Tecnicamente: Il System.js utilizza la funzione sysApplyAgendaUI(). Prima di renderizzare la sidebar, interroga Firebase per i settings.agenda_ui. Tramite attributi data-toggle="X", applica istantaneamente classi CSS (.hidden-by-settings) che impostano display: none!important sui rami del DOM non voluti.
+
+💡 Spunto Aziendale: Se apri un chiosco in spiaggia, non ti serve chiedere il "Numero di Camera" o "L'operatore". Spegni i tasti e la reception farà scontrini al doppio della velocità.
+
+3. Motore WhatsApp Web Integrato
+
+Umanamente: Quando salvi l'appuntamento, clicchi "Invia WhatsApp". Ti si apre una finestrella che ti fa scegliere il Template (es. Italiano o Inglese). Tu clicchi e ti si apre in automatico WhatsApp nel computer con il messaggio già scritto e personalizzato col nome del cliente. Tu devi solo premere "Invio".
+
+Tecnicamente: Funzione sysOpenTemplateSelector che preleva i dati del form in tempo reale, usa le espressioni regolari (.replace(/\{\{NOME\}\}/g, appData.nome)) per compilare il testo, effettua l'encodeURIComponent() e genera un link wa.me/numero?text=testo aggirando le limitazioni della Sandbox dei browser.
+
+💡 Spunto Aziendale: Fidelizza il cliente senza costi aggiuntivi. Promemoria rapidi abbassano il tasso di "No-Show" (persone che non si presentano).
+
+4. CRM Clienti Globale/Locale e Storico
+
+Umanamente: Se inizi a scrivere un nome, il sistema te lo suggerisce. Se clicchi su un cliente, vedi il suo profilo: quanti soldi ha speso in tutta la tua catena di SPA, che problemi di salute ha, e i PDF firmati.
+
+Tecnicamente: Doppio layer di Database. Un global_customers che tiene traccia del cliente a livello aziendale (per calcolare il Total Lifetime Value), e interrogazioni locali annidate che estraggono i trattamenti effettuati nella singola SPA analizzando i cicli for giornalieri.
+
+💡 Spunto Aziendale: Se un cliente VIP di Misurina va nella SPA di Cortina, la ragazza a Cortina sa già che lui ha problemi di cervicale e preferisce l'olio caldo. Effetto "Wow" assicurato.
+
+5. Integrazione Tablet (Device Sync & PDF Engine)
+
+Umanamente: Clicchi "INVIA A TABLET". Il tablet in sala d'attesa si accende col contratto del cliente. Le caselline "Relax" e "Buona Salute" sono già spuntate da sole. Le patologie scritte dalla receptionist vengono stampate in automatico sul foglio. Il cliente firma col dito.
+
+Tecnicamente:
+
+Sync: Uso del demone DeviceSync.js per far dialogare PC e Tablet via WebSocket/Firebase.
+
+Parser Avanzato: Motore aggressivo basato su Regex (/(<input[^>]*type=["']?checkbox["']?[^>]*>)\s*(?:<[^>]+>|&nbsp;|\s)*(Relax|buona salute)/gi) e scansione profonda del DOM HTML (document.createTreeWalker) per aggirare i problemi di annidamento delle tabelle di Microsoft Word.
+
+Iniezione: Sostituisce stringhe fisse (es. le linee ..........) con stringhe formattate <b style="color:black">Testo Patologia</b>.
+
+💡 Spunto Aziendale: Riduce a zero lo stress del cliente (che deve solo firmare) e tutela legalmente la SPA inibendo l'errore umano (le caselle obbligatorie non possono essere "dimenticate" dalla reception).
+
+6. Lista Appuntamenti & Switch Stati
+
+Umanamente: Una visione in stile "Excel" di tutto il mese. Utile a fine serata per vedere chi ha pagato e chi no. Con un click sulla levetta (switch) segni i pagamenti.
+
+Tecnicamente: Estrazione iterativa massiva dei nodi giornalieri. Generazione di righe HTML con sistema di evidenziazione cromatica (Giallo = Eseguito, Verde = Pagato).
+
+💡 Spunto Aziendale: Essenziale per la quadratura di cassa serale e il controllo incrociato con il gestionale dell'Hotel.
+
+🔒 3. ARCHITETTURA TECNICA E SICUREZZA
+Il sistema si basa su principi avanzati di sviluppo Web:
+
+No-SQL e Real-Time: Firebase elimina la necessità di aggiornare la pagina (F5). Se due receptionist lavorano da due PC diversi, vedono i blocchi muoversi in tempo reale come in un videogioco multiplayer.
+
+Protezione Cross-Origin (Bypass): L'invio di WhatsApp sfrutta la generazione dinamica di link wa.me per non violare le policy di sicurezza di Meta, permettendo l'uso di WhatsApp Desktop senza pagare API ufficiali.
+
+Data Isolation: Sebbene il database sia uno, ogni "Client SPA" è "intrappolato" nel suo twStructId. Non può fisicamente scaricare, vedere o manipolare l'agenda o i guadagni di un'altra filiale.
+
+Local Storage e PWA: Il sistema salva in locale cache, preferenze visive (Light/Dark mode) e settaggi UI per un'esperienza fluida simile a un'App installata (Progressive Web App).

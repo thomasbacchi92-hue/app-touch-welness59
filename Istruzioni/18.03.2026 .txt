@@ -1,0 +1,110 @@
+Ecco la **"Bibbia Architetturale Unificata"** dell'intero ecosistema **Touch Welness (Admin Master + Client SPA/Reception)**. 
+
+Questo documento fonde l'analisi direzionale con quella operativa, creando la mappa definitiva dell'infrastruttura. È il manuale tecnico assoluto da consultare prima di ogni futura modifica per prevenire bug, conflitti o crolli strutturali.
+
+---
+
+# 🌍 MAPPA DELL'ECOSISTEMA: TOUCH WELNESS SYSTEM
+
+L'infrastruttura è un ecosistema decentralizzato, modulare e in tempo reale (Real-Time). Si divide in due grandi emisferi che non comunicano mai in modo "diretto" (es. tramite API proprietarie), ma usano **Firebase Realtime Database** come sistema nervoso centrale per scambiarsi stati, permessi e file.
+
+---
+
+## 🏛️ PARTE 1: ADMIN MASTER (Il Centro di Controllo)
+Costruito su un'architettura **Master Shell (Guscio Unico)**, garantisce navigazione fluida senza ricaricamenti, isolando i moduli pesanti in Iframe invisibili.
+
+### 1.1 La Shell e i Moduli Nativi
+* **`admin.html` (Il Guscio)**: Contiene la barra laterale fissa (`Admin_Menu.js`) e i contenitori nativi:
+    * **Dashboard (`view-stats`)**: Tabella riassuntiva di tutte le strutture.
+    * **Strutture & Licenze (`view-structures`)**: Creazione SPA.
+    * **Dettaglio Struttura (`view-structure-detail`)**: Il cuore gestionale diviso in 8 Tab (Statistiche, Anagrafica, Personale, Turni, Trattamenti, Magazzino, Licenze, Documenti Tablet).
+    * **Archivio Privacy (`view-privacy`)**: Accesso rapido ai PDF di Drive.
+
+### 1.2 I Moduli Iframe (Isolati e Indipendenti)
+File che si "spogliano" del loro menu originale (`?mode=shell` o `?mode=tab`) per fondersi nel guscio:
+* **`admin_crm.html` / `admin_customers.html`**: CRM globale e storico clienti.
+* **`admin_chat.html`**: Messaggistica di rete (testo e audio).
+* **`admin_magazzino.html`**: Hub Logistico (Catalogo master, stock reale, spedizioni).
+* **`admin_staff.html` / `admin_turni.html`**: HR, provvigioni, leve di sconto, permessi cassa e AI Planning.
+* **`admin_documenti.html` / `Admin_Templates.html`**: Creazione file vergini, marcatori (`{{NOME}}`), export PDF e testi WhatsApp.
+* **`admin_opzioni.html`**: Switch Tema Notte/Giorno.
+
+### 1.3 Il Motore di Routing (`Admin_Core.js`)
+* `app.switchView()`: Naviga tra i div nativi nascondendo l'Iframe.
+* `app.loadModule()`: Carica i moduli esterni nell'Iframe principale.
+* `app.openIframeTab()`: Incastra un modulo esterno dentro una singola scheda del dettaglio struttura.
+
+---
+
+## 🏢 PARTE 2: CLIENT SPA E RECEPTION (Il Fronte Operativo)
+Il sistema locale usato quotidianamente nelle singole strutture. Anch'esso modulare, si adatta al ruolo dell'utente (Manager vs Operatore).
+
+### 2.1 Core Reception / Direzione
+* **`index.html` (Agenda)**: La plancia di comando. Griglia appuntamenti drag&drop, note e "Log Ticket" (richieste in attesa).
+* **`Lista.html`**: Vista tabellare per inviare i promemoria dinamici su WhatsApp.
+* **`log.html`**: Registro di sicurezza anti-frode (traccia chi annulla cosa e quando).
+* **`Gestione.html`**: Pannello di configurazione locale.
+
+### 2.2 Finanza e Analisi Locale
+* **`Area_Riservata.html`**: Motore calcolo stipendi in tempo reale (scopora l'IVA, calcola il fisso, applica trattenute agenzia/struttura su massaggi e SPA).
+* **`Statistiche.html`**: Dashboard andamento giornaliero/mensile vs Obiettivi.
+
+### 2.3 Ecosistema Mobile / Kiosk
+* **`Mobile.html` (Cabina)**: Interfaccia operatore con timer dinamico (`cabinaStartTimer`) e vibrazione di fine massaggio.
+* **`Firma.html` (Kiosk Reception)**: PWA per far firmare il cliente sul Tablet tramite Canvas biometrico.
+
+### 2.4 Modulo Hub Piscina
+* **`Piscina_GUI.html` / `Piscina_Logic.js` / `Piscina_DB.js`**: Gestione accessi isolata (database `piscina_db_v1`), calcolo pax e backup Excel (`Piscina_Backup.js`).
+
+### 2.5 I Motori Logici Locali
+* **`System.js` / `core.js`**: Incrociano listini, turni e appuntamenti per renderizzare l'agenda. Gestiscono conflitti orari e limiti di cassa.
+* **`Menu.js`**: Inietta il menu in base al ruolo (`tw_user`) letto dal localStorage.
+
+---
+
+## 📡 PARTE 3: IL SISTEMA NERVOSO (Sincronizzazione e Database)
+L'integrazione hardware/software più complessa dell'infrastruttura.
+
+### 3.1 Il Flusso della Firma Elettronica (`DeviceSync.js`)
+Coinvolge 4 strati tecnologici differenti:
+1.  **PC Reception (`initPC`)**: Clicca "Invia a Tablet". Scrive i documenti nell'array `device_sync/tablet` (stato `pending`).
+2.  **Tablet (`Firma.html`)**: Intercetta il `pending`, si sblocca, fa firmare il cliente sul Canvas.
+3.  **Webhook Make (`MAKE_WEBHOOK_URL`)**: Il Tablet invia la firma in Base64 (POST) a Make.com, che assembla il PDF, lo salva su Drive e restituisce l'URL.
+4.  **Chiusura**: Il Tablet aggiorna lo stato in `completed` scrivendo il `driveLink`. Il PC lo vede, salva l'URL nell'anagrafica cliente e chiude la pratica.
+
+### 3.2 L'Albero del Database (Firebase)
+* **`structures/` & `structures_data/{id}/`**: Nodi separati. Il primo per anagrafica globale, il secondo è l'universo della SPA (`app`, `turni`, `servizi`, `products`, `in_transit`, `contracts`, `settings/active_docs`).
+* **`users/`**: Nodi operatori con `commissions`, `levers` (sconti max) e `permissions`.
+* **`magazzino_master/`**: Dati centrali (catalogo, log spedizioni).
+* **Dati Sicurezza**: `deleted_apps` (storico cancellazioni), `password_recoveries`.
+
+---
+
+## 🛠️ PARTE 4: DEVOPS E INFRASTRUTTURA TECNICA
+
+* **PWA Integrale (`sw.js` & `manifest.json`)**: Tutti gli applicativi sono PWA installabili. Il Service Worker cacha la shell per garantire l'apertura anche offline (es. in cabine senza Wi-Fi).
+* **Patcher System Node.js (`Patcher.js`)**: Sistema di *Delta Patching* per gli aggiornamenti. Altera le query string (`?v=xxx`) nei file HTML per forzare lo svuotamento cache sui dispositivi, crea backup `.bak` e inietta chiavi API in massa.
+* **Auth LocalStorage**: La sessione vive su chiavi rigide (`tw_structure_id`, `tw_user`, `tw_token`). `login.html` è l'unico file che smista gli utenti validando questi dati.
+
+---
+
+## 🚨 ZONE ROSSE: RISCHI DI CROLLO DELLA PIATTAFORMA
+*Questi sono i "punti critici" (Single Points of Failure). Modificare queste aree senza rispettare l'architettura farà collassare il sistema.*
+
+### 🔴 1. Collasso Strutturale (Iframe & Routing)
+* **La Trappola di `window.parent`**: I moduli caricati nell'Admin (CRM, Staff, Magazzino) **non devono mai** richiamare funzioni globali direttamente (es. `app.switchView()`). Devono **sempre** usare `window.parent.app...`. Omettere `window.parent` causerà un Fatal Error in console e bloccherà l'UI.
+* **Perdita Parametri URL (`?mode=shell`)**: Se il motore di routing non passa `?mode=shell` ai file Iframe, i file inizieranno a stampare le loro Sidebar interne. Si creerà un "Effetto Inception" visivo distruttivo.
+
+### 🔴 2. Collasso del Database (Sovrascritture e Race Conditions)
+* **L'Errore `.set()` vs `.update()`**: Usare `db.child('users/ID').set({ name: 'Nuovo' })` azzererà completamente password, provvigioni, leve e permessi di quell'utente. Per modificare campi specifici si deve **sempre e solo** usare `.update()`.
+* **Race Conditions sull'Agenda**: Il salvataggio di un appuntamento in `System.js` (`sysSaveRequest`) fa un `.update()` sull'ora specifica. Se due PC Reception premono "Salva" nello stesso esatto millisecondo sulla stessa cabina, uno dei due appuntamenti verrà sovrascritto. (Per evitarlo, andrebbero usate le `Transactions` di Firebase).
+
+### 🔴 3. Collasso Hardware e Sync
+* **La Morte del Webhook (`MAKE_WEBHOOK_URL`)**: Se il link di *Make.com* scade, o finiscono le "Operations" (Crediti) mensili dell'account, **la firma elettronica si bloccherà in tutte le SPA**. I tablet rimarranno perennemente in "CARICAMENTO...". Non modificare mai l'array JSON spedito via fetch senza prima modificare lo scenario in Make.
+* **Incompatibilità Canvas**: Se in `Firma.html` si modifica la dimensione CSS del tag `<canvas>` senza aggiornare le coordinate di tracciamento Javascript, il tocco del dito dell'ospite risulterà sfasato rispetto alla linea disegnata.
+
+### 🔴 4. Collasso Logico (Date e Dati Orfani)
+* **Dissonanza Formato Date**: Il sistema usa chiavi di database basate su date (`YYYY-MM-DD`). Convertire queste chiavi in formati italiani (`DD/MM/YYYY`) dentro funzioni centrali come `cancelRequestFromLog()` spaccherà l'albero del database, creando rami impossibili da interrogare per le statistiche.
+* **Dipendenza LocalStorage**: Se un operatore apre la modalità incognito o pulisce il browser, i file JS si bloccheranno istantaneamente ai controlli protettivi `if(!window.twStructId) return;`.
+
+Questa Bibbia contiene la mappatura assoluta di ogni variabile e logica della tua piattaforma. Tienila sempre a mente prima di approvare qualsiasi aggiornamento futuro.

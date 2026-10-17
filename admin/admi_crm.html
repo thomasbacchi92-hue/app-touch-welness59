@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CRM Clienti - TOUCH WELNESS</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+  :root { 
+      --bg-body: #0f172a; --bg-panel: #1e293b; --border-line: #334155; 
+      --text-main: #f8fafc; --text-muted: #94a3b8; 
+      --accent: #38bdf8; --gold: #fbbf24; --green: #10b981; --red: #ef4444; --purple: #a855f7;
+  }
+  :root.light-theme {
+      --bg-body: #f8fafc; --bg-panel: #ffffff; --border-line: #e2e8f0;
+      --text-main: #0f172a; --text-muted: #64748b;
+  }
+
+  body { font-family: -apple-system, sans-serif; background: var(--bg-body); margin: 0; color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  * { box-sizing: border-box; }
+
+  .navbar { background: var(--bg-panel); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 10; flex-shrink: 0; }
+  .navbar h1 { margin: 0; font-size: 18px; color: var(--accent); display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 1px;}
+  
+  .btn-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.2s; font-size: 13px; }
+  .btn-action:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+  .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-line); }
+  .btn-outline:hover { background: rgba(255,255,255,0.05); transform: none; box-shadow: none;}
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  
+  .main-content { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; align-items: center; }
+  .container { width: 100%; max-width: 1100px; display: flex; flex-direction: column; gap: 20px; }
+
+  .card { background: var(--bg-panel); border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-line); }
+  
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
+  .form-input { width: 100%; padding: 12px; border: 1px solid var(--border-line); border-radius: 8px; font-size: 14px; background: var(--bg-body); color: var(--text-main); color-scheme: dark; outline: none; transition: 0.2s; }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3); }
+
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+  .data-table th { color: var(--text-muted); padding: 12px; border-bottom: 2px solid var(--border-line); font-size: 11px; text-transform: uppercase; background: var(--bg-body); position: sticky; top:0; z-index:2;}
+  .data-table td { padding: 12px; border-bottom: 1px solid var(--border-line); color: var(--text-main); }
+  .clickable:hover { background: rgba(56,189,248,0.05); cursor: pointer; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+  .stat-card { padding: 15px; text-align: center; background: var(--bg-body); border-radius: 12px; border: 1px solid var(--border-line); border-bottom: 4px solid var(--accent); }
+  .stat-lbl { font-size: 10px; color: var(--text-muted); font-weight: bold; text-transform: uppercase; margin-bottom:5px; }
+  .stat-val { font-size: 20px; font-weight: 900; color: var(--text-main); }
+
+  .tabs-header { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid var(--border-line); overflow-x: auto; padding-bottom:5px; }
+  .tab-btn { padding: 10px 15px; background: none; border: none; cursor: pointer; font-weight: bold; color: var(--text-muted); border-bottom: 3px solid transparent; white-space: nowrap; transition: 0.2s; }
+  .tab-btn:hover { color: var(--text-main); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  
+  .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; display:inline-block; }
+
+  #toastBlue { visibility: hidden; min-width: 250px; background: var(--accent); color: #0f172a; text-align: center; border-radius: 8px; padding: 16px; position: fixed; right: 30px; bottom: 30px; z-index: 9999; font-size: 14px; font-weight: bold; opacity: 0; transition: 0.5s; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+  #toastBlue.show { visibility: visible; opacity: 1; bottom: 40px; }
+  
+  .view-section { display: none; }
+  .view-section.active { display: block; animation: fade 0.3s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+</style>
+<script>
+    if(localStorage.getItem('tw_admin_theme') === 'light') { document.documentElement.classList.add('light-theme'); }
+</script>
+</head>
+<body>
+
+<div id="toastBlue">Notifica</div>
+
+<div class="navbar">
+    <h1><i class="material-icons-round">contact_page</i> CRM Clienti Master</h1>
+    <button class="btn-action btn-outline" onclick="window.location.href='admin.html'">
+        <i class="material-icons-round">arrow_back</i> TORNA ALLA DASHBOARD
+    </button>
+</div>
+
+<div class="main-content">
+    <div class="container">
+        
+        <div id="view-struct-list" class="view-section active">
+            <div class="card">
+                <h2 style="margin-top:0; color:var(--accent); display:flex; align-items:center; gap:10px; border-bottom:2px solid var(--border-line); padding-bottom:15px;">
+                    <i class="material-icons-round">apartment</i> Anagrafica e Filtro Strutture
+                </h2>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Seleziona la Struttura per visualizzare i clienti registrati e gestire i loro documenti privacy.</p>
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead><tr><th>Nome Struttura</th><th style="text-align:right">Azione</th></tr></thead>
+                        <tbody id="crmStructsTableBody">
+                            <tr><td colspan="2" style="text-align:center; padding:20px; color:var(--text-muted)">Caricamento database...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-client-list" class="view-section">
+            <button class="btn-action btn-outline" style="margin-bottom:15px; border:none; padding:0; color:var(--text-muted);" onclick="crmApp.showView('struct-list')">
+                <i class="material-icons-round">arrow_back</i> TORNA ALLE STRUTTURE
+            </button>
+            <div class="card">
+                <h2 id="crmStructNameTitle" style="margin-top:0; border:none; margin-bottom:15px; color:var(--text-main);">Clienti Struttura</h2>
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="text" id="searchCustomer" class="form-input" placeholder="🔍 Cerca cliente per nome o telefono..." onkeyup="crmApp.renderCustomers()" style="flex:1; margin:0;">
+                </div>
+                <div style="max-height: 600px; overflow-y:auto; border:1px solid var(--border-line); border-radius:12px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 10%; text-align:center" title="Privacy Caricata">PRIVACY</th>
+                                <th style="width: 30%;">NOME CLIENTE</th>
+                                <th style="width: 25%;">TELEFONO</th>
+                                <th style="width: 25%;">DATA NASCITA</th>
+                                <th style="width: 10%; text-align:right">PROFILO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminCustomersTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-client-detail" class="view-section">
+            <button class="btn-action btn-outline" style="margin-bottom:15px; border:none; padding:0; color:var(--text-muted);" onclick="crmApp.showView('client-list')">
+                <i class="material-icons-round">arrow_back</i> TORNA ALLA LISTA CLIENTI
+            </button>
+            
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid var(--border-line); padding-bottom: 10px; margin-bottom: 20px;">
+                    <h2 style="border:none; margin:0; padding:0;"><i class="material-icons-round" style="color:var(--accent); vertical-align:middle;">account_circle</i> <span id="cd_name" style="color:var(--text-main)">Nome Cliente</span></h2>
+                    <span id="cd_id" class="badge" style="background:var(--bg-body); color:var(--text-muted); border:1px solid var(--border-line); font-size:12px;"></span>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-bottom-color:var(--gold)"><div class="stat-lbl">Telefono</div><div class="stat-val" id="cd_phone">-</div></div>
+                    <div class="stat-card" style="border-bottom-color:var(--accent)"><div class="stat-lbl">Data Nascita</div><div class="stat-val" id="cd_dob">-</div></div>
+                    <div class="stat-card" style="border-bottom-color:var(--green)"><div class="stat-lbl">Spesa Network SPA</div><div class="stat-val" id="cd_tot_spent" style="color:var(--green)">0.00 €</div></div>
+                </div>
+
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="crmApp.openTab('history', this)">Storico Trattamenti e Note</button>
+                    <button class="tab-btn" onclick="crmApp.openTab('docs', this)">Documenti & Privacy</button>
+                </div>
+
+                <div id="tab-history" class="tab-content active">
+                    <div class="form-group" style="margin-bottom:20px;">
+                        <label>Note Interne Cliente (Condivise nel Network)</label>
+                        <textarea id="cd_note" rows="2" class="form-input" placeholder="Preferenze, allergie, direttive..." onchange="crmApp.saveCustomerNote()"></textarea>
+                    </div>
+                    <div style="overflow-x: auto; border: 1px solid var(--border-line); border-radius: 12px;">
+                        <table class="data-table">
+                            <thead><tr><th>Data</th><th>Struttura SPA</th><th>Servizio</th><th>Operatore</th><th style="text-align:right;">Prezzo / Stato</th></tr></thead>
+                            <tbody id="cd_history_table"><tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted)">Scansione storico in corso...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab-docs" class="tab-content">
+                    <div style="overflow-x: auto; border: 1px solid var(--border-line); border-radius: 12px;">
+                        <table class="data-table">
+                            <thead><tr><th>Data Firma</th><th>Nome Documento (Moduli SPA)</th><th>Azione</th><th style="text-align:right">Elimina</th></tr></thead>
+                            <tbody id="cd_docs_table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const fbConfig = {
+        apiKey: "AIzaSyCrDuK7SWHdbzrJR-pNpxmRwGnZgV2Dd2Y",
+        authDomain: "touch-welness-massage.firebaseapp.com",
+        databaseURL: "https://touch-welness-massage-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "touch-welness-massage",
+        storageBucket: "touch-welness-massage.firebasestorage.app"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+
+    window.crmApp = {
+        db: firebase.database().ref('MASTER_ADMIN_DB'),
+        structures: {},
+        globalCustomers: {},
+        structuresData: {},
+        currentStructId: null,
+        currentCustId: null,
+
+        init: function() {
+            this.db.on('value', snap => {
+                const data = snap.val() || {};
+                this.structures = data.structures || {};
+                this.globalCustomers = data.global_customers || {};
+                this.structuresData = data.structures_data || {};
+                
+                this.renderStructs();
+                if(this.currentStructId && document.getElementById('view-client-list').classList.contains('active')) {
+                    this.renderCustomers();
+                }
+                if(this.currentCustId && document.getElementById('view-client-detail').classList.contains('active')) {
+                    this.loadCustomerDetail(this.currentCustId);
+                }
+            });
+        },
+
+        showToast: function(msg) {
+            const t = document.getElementById("toastBlue");
+            t.innerText = msg; t.classList.add("show");
+            setTimeout(() => t.classList.remove("show"), 3000);
+        },
+
+        showView: function(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + viewName).classList.add('active');
+        },
+
+        openTab: function(tabName, el) {
+            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            el.classList.add('active');
+        },
+
+        renderStructs: function() {
+            const tbody = document.getElementById('crmStructsTableBody');
+            tbody.innerHTML = "";
+            let count = 0;
+            Object.values(this.structures).forEach(s => {
+                if(!s.archived) {
+                    count++;
+                    const sNameSafe = s.name.replace(/'/g, "\\'");
+                    tbody.innerHTML += `
+                    <tr class="clickable" onclick="crmApp.openStruct('${s.id}', '${sNameSafe}')">
+                        <td><b style="color:var(--text-main); font-size:15px;">${s.name}</b></td>
+                        <td style="text-align:right"><button class="btn-action btn-sm btn-outline">VEDI CLIENTI</button></td>
+                    </tr>`;
+                }
+            });
+            if(count === 0) tbody.innerHTML = "<tr><td colspan='2' style='text-align:center; padding:20px; color:var(--text-muted)'>Nessuna struttura attiva.</td></tr>";
+        },
+
+        openStruct: function(sid, sName) {
+            this.currentStructId = sid;
+            document.getElementById('crmStructNameTitle').innerHTML = `<span style="color:var(--accent)">Struttura:</span> ${sName}`;
+            document.getElementById('searchCustomer').value = '';
+            this.renderCustomers();
+            this.showView('client-list');
+        },
+
+        renderCustomers: function() {
+            const sid = this.currentStructId;
+            const tbody = document.getElementById('adminCustomersTable');
+            const query = document.getElementById('searchCustomer').value.toLowerCase().trim();
+            
+            let structClients = [];
+            const structData = this.structuresData[sid] || {};
+            const appsObj = structData.app || {};
+            
+            // Trova chi è passato da questa SPA cercando nell'agenda
+            let namesInStruct = new Set();
+            for(let d in appsObj) {
+                const dayApps = Array.isArray(appsObj[d]) ? appsObj[d] : Object.values(appsObj[d]);
+                dayApps.forEach(a => { if(a && a.cog) namesInStruct.add(a.cog.toLowerCase().trim()); });
+            }
+
+            Object.entries(this.globalCustomers).forEach(([id, c]) => {
+                // Il cliente appartiene alla struttura se è stato creato lì o se ha preso un appuntamento lì
+                if(c.structId === sid || namesInStruct.has((c.nome||'').toLowerCase().trim())) {
+                    if(!query || (c.nome||'').toLowerCase().includes(query) || (c.tel||'').includes(query)) {
+                        structClients.push({ id, ...c });
+                    }
+                }
+            });
+
+            structClients.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+            tbody.innerHTML = "";
+            
+            if(structClients.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; color:var(--text-muted)'>Nessun cliente registrato o corrispondente alla ricerca.</td></tr>";
+                return;
+            }
+
+            structClients.forEach(c => {
+                const hasPrivacy = c.docs && Object.keys(c.docs).length > 0;
+                const dotColor = hasPrivacy ? 'var(--green)' : 'var(--red)';
+                const dotTitle = hasPrivacy ? 'Privacy Ok' : 'Manca Privacy';
+                const dateStr = c.dataNascita ? c.dataNascita.split('-').reverse().join('/') : 'N.D.';
+
+                tbody.innerHTML += `
+                    <tr class="clickable" onclick="crmApp.loadCustomerDetail('${c.id}')">
+                        <td style="text-align:center"><div style="width:14px; height:14px; border-radius:50%; background:${dotColor}; margin:0 auto; box-shadow:0 0 5px ${dotColor}" title="${dotTitle}"></div></td>
+                        <td><b style="color:var(--text-main); text-transform:uppercase; font-size:14px;">${c.nome}</b></td>
+                        <td>${c.tel || 'N.D.'}</td>
+                        <td style="color:var(--text-muted); font-size:13px;">${dateStr}</td>
+                        <td style="text-align:right"><button class="btn-action btn-sm btn-outline">APRI PROFILO</button></td>
+                    </tr>
+                `;
+            });
+        },
+
+        loadCustomerDetail: function(id) {
+            this.currentCustId = id;
+            const c = this.globalCustomers[id];
+            if(!c) return;
+
+            document.getElementById('cd_name').innerText = c.nome.toUpperCase();
+            document.getElementById('cd_id').innerText = id.substring(1,9).toUpperCase();
+            document.getElementById('cd_phone').innerText = c.tel || 'N.D.';
+            document.getElementById('cd_dob').innerText = c.dataNascita ? c.dataNascita.split('-').reverse().join('/') : 'N.D.';
+            document.getElementById('cd_note').value = c.note || '';
+
+            let history = []; 
+            let totalSpent = 0; 
+            
+            // Cerca in tutto il network (Tutte le SPA)
+            for(let loopSid in this.structuresData) {
+                const structName = this.structures[loopSid] ? this.structures[loopSid].name : loopSid;
+                const appsObj = this.structuresData[loopSid].app || {};
+                const serviziList = Array.isArray(this.structuresData[loopSid].servizi) ? this.structuresData[loopSid].servizi : Object.values(this.structuresData[loopSid].servizi || {});
+
+                for(let dateKey in appsObj) {
+                    const dayApps = Array.isArray(appsObj[dateKey]) ? appsObj[dateKey] : Object.values(appsObj[dateKey]);
+                    dayApps.forEach(a => {
+                        if(a && a.cog && a.cog.toLowerCase() === c.nome.toLowerCase()) {
+                            let price = parseFloat(a.price) || parseFloat(a.prezzo) || 0;
+                            if(price === 0 && a.serv) { 
+                                const srv = serviziList.find(s => s && a.serv.includes(s.nome)); 
+                                if(srv && srv.prezzo) price = parseFloat(srv.prezzo); 
+                            }
+                            if(a.pagato) totalSpent += price;
+                            history.push({ date: dateKey, struct: structName, serv: a.serv||'-', op: a.op||'-', price: price, pagato: a.pagato });
+                        }
+                    });
+                }
+            }
+
+            document.getElementById('cd_tot_spent').innerText = totalSpent.toFixed(2) + " €";
+
+            history.sort((a,b) => b.date.localeCompare(a.date));
+            const hBody = document.getElementById('cd_history_table');
+            if(history.length === 0) { 
+                hBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; color:var(--text-muted)'>Nessuno storico trattamenti trovato.</td></tr>"; 
+            } else {
+                hBody.innerHTML = history.map(h => {
+                    const badge = h.pagato ? `<span style="color:var(--green); font-size:10px; font-weight:bold">PAGATO</span>` : `<span style="color:var(--red); font-size:10px; font-weight:bold">DA PAGARE</span>`;
+                    return `<tr><td>${h.date.split('-').reverse().join('/')}</td><td><b>${h.struct}</b></td><td>${h.serv}</td><td>${h.op}</td><td style="text-align:right"><b>${h.price.toFixed(2)}€</b><br>${badge}</td></tr>`;
+                }).join('');
+            }
+
+            // Carica Documenti
+            const docsTable = document.getElementById('cd_docs_table');
+            docsTable.innerHTML = "";
+            if(c.docs && Object.keys(c.docs).length > 0) {
+                Object.entries(c.docs).forEach(([docId, doc]) => {
+                    docsTable.innerHTML += `
+                    <tr>
+                        <td>${doc.dataInserimento || '-'}</td>
+                        <td><b>${doc.nomeDoc}</b></td>
+                        <td><a href="${doc.link}" target="_blank" class="btn-action btn-sm btn-outline" style="color:var(--green); border-color:var(--green);"><i class="material-icons-round">picture_as_pdf</i> VEDI PDF</a></td>
+                        <td style="text-align:right"><button class="btn-action btn-sm btn-outline" style="color:var(--red); border-color:var(--red);" onclick="crmApp.deleteCustomerDoc('${id}', '${docId}')"><i class="material-icons-round">delete</i></button></td>
+                    </tr>`;
+                });
+            } else { 
+                docsTable.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-muted)'>Nessun documento privacy associato a questo cliente.</td></tr>"; 
+            }
+
+            this.showView('client-detail');
+        },
+
+        saveCustomerNote: function() {
+            const note = document.getElementById('cd_note').value;
+            if(this.currentCustId) {
+                this.db.child('global_customers').child(this.currentCustId).update({ note: note }).then(() => {
+                    this.showToast("Note cliente aggiornate.");
+                });
+            }
+        },
+
+        deleteCustomerDoc: function(cId, docId) {
+            if(confirm("Vuoi eliminare definitivamente questo documento privacy dal server? L'operazione è irreversibile.")) {
+                this.db.child(`global_customers/${cId}/docs/${docId}`).remove().then(() => {
+                    this.showToast("Documento eliminato."); 
+                    this.loadCustomerDetail(cId);
+                });
+            }
+        }
+    };
+
+    window.onload = () => window.crmApp.init();
+
+</script>
+</body>
+</html>

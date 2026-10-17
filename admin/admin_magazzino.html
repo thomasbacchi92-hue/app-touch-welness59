@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Hub Logistico Master - TOUCH WELNESS</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+  :root { --bg-body: #0f172a; --bg-panel: #1e293b; --border-line: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #38bdf8; --gold: #fbbf24; --green: #10b981; --red: #ef4444; }
+  :root.light-theme { --bg-body: #f8fafc; --bg-panel: #ffffff; --border-line: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+  body { font-family: -apple-system, sans-serif; background: var(--bg-body); margin: 0; color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  * { box-sizing: border-box; }
+  .navbar { background: var(--bg-panel); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--green); z-index: 10; flex-shrink: 0; }
+  .navbar h1 { margin: 0; font-size: 18px; color: var(--green); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
+  .btn-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.2s; font-size: 13px; }
+  .btn-action:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+  .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-line); }
+  .btn-green { background: var(--green); color: white; }
+  .btn-red { background: var(--red); color: white; }
+  .btn-gold { background: var(--gold); color: #0f172a; }
+  .w-100 { width: 100%; }
+  .main-content { flex: 1; overflow-y: auto; padding: 20px; }
+  .card { background: var(--bg-panel); border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-line); margin-bottom: 20px;}
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
+  .form-input { width: 100%; padding: 12px; border: 1px solid var(--border-line); border-radius: 8px; font-size: 14px; background: var(--bg-body); color: var(--text-main); outline: none; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+  .data-table th { color: var(--text-muted); padding: 12px; border-bottom: 2px solid var(--border-line); font-size: 11px; text-transform: uppercase; background: var(--bg-body); position: sticky; top:0; z-index:2;}
+  .data-table td { padding: 12px; border-bottom: 1px solid var(--border-line); color: var(--text-main); }
+  .btn-icon { background: none; border: none; cursor: pointer; color: var(--text-muted); padding:5px; transition:0.2s;}
+  .btn-icon:hover { color: var(--accent); transform: scale(1.2); }
+  .btn-icon.del:hover { color: var(--red); }
+  .tabs-header { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-line); overflow-x: auto; padding-bottom:5px; }
+  .tab-btn { padding: 10px 15px; background: none; border: none; cursor: pointer; font-weight: bold; color: var(--text-muted); border-bottom: 3px solid transparent; white-space: nowrap; }
+  .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+  .tab-content { display: none; } .tab-content.active { display: block; }
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; }
+  .modal-box { background: var(--bg-panel); padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 1px solid var(--border-line); }
+  #toastBlue { visibility: hidden; min-width: 250px; background: var(--green); color: white; text-align: center; border-radius: 8px; padding: 16px; position: fixed; right: 30px; bottom: 30px; z-index: 9999; font-weight: bold; opacity: 0; transition: 0.5s; }
+  #toastBlue.show { visibility: visible; opacity: 1; bottom: 40px; }
+  .cart-row { display:flex; justify-content:space-between; align-items:center; background:var(--bg-body); padding:10px; border-radius:8px; border:1px solid var(--border-line); margin-bottom:10px;}
+</style>
+<script>if(localStorage.getItem('tw_admin_theme') === 'light') document.documentElement.classList.add('light-theme');</script>
+</head>
+<body>
+
+<div id="toastBlue">Notifica</div>
+
+<div class="navbar">
+    <h1><i class="material-icons-round">inventory_2</i> HUB LOGISTICO MASTER</h1>
+    <button class="btn-action btn-outline" onclick="if(window.parent && window.parent.app) { window.parent.app.switchView('stats'); } else { window.history.back(); }">
+        <i class="material-icons-round">arrow_back</i> DASHBOARD
+    </button>
+</div>
+
+<div class="main-content">
+    
+    <div class="tabs-header">
+        <button class="tab-btn active" onclick="hubApp.openTab('catalog', this)">Catalogo & Giacenze Master</button>
+        <button class="tab-btn" onclick="hubApp.openTab('ship', this)">Spedizioni SPA & Carrello</button>
+        <button class="tab-btn" onclick="hubApp.openTab('logs', this)">Registro Movimenti Master</button>
+    </div>
+
+    <div id="tab-catalog" class="tab-content active">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px">
+            
+            <div class="card" style="margin:0;">
+                <h2 style="color:var(--accent); margin-top:0; border-bottom:1px solid var(--border-line); padding-bottom:10px;">1. Anagrafica Materiali</h2>
+                <div class="form-group"><label>Nome Materiale</label><input type="text" id="catName" class="form-input" placeholder="Es. Olio Mandorle"></div>
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1"><label>Unità (ml, kg, pz)</label><input type="text" id="catUnit" class="form-input" placeholder="pz"></div>
+                    <div class="form-group" style="flex:1"><label>Costo Base (€)</label><input type="number" id="catCost" class="form-input" step="0.01" placeholder="0.00"></div>
+                </div>
+                <button class="btn-action w-100" onclick="hubApp.addCatalogItem()"><i class="material-icons-round">add_circle</i> AGGIUNGI AL CATALOGO</button>
+                
+                <h3 style="margin-top:30px; border-bottom:1px solid var(--border-line); padding-bottom:5px;">Elenco Tipologie</h3>
+                <div style="max-height:300px; overflow-y:auto;">
+                    <table class="data-table">
+                        <tbody id="catalogTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" style="margin:0; border-color:var(--green)">
+                <h2 style="color:var(--green); margin-top:0; border-bottom:1px solid var(--green); padding-bottom:10px;">2. Giacenza Reale Master</h2>
+                <p style="font-size:12px; color:var(--text-muted)">Qui carichi o scarichi la merce fisica presente nell'Hub Centrale.</p>
+                <div style="max-height:500px; overflow-y:auto; border:1px solid var(--border-line); border-radius:12px;">
+                    <table class="data-table">
+                        <thead><tr><th>Articolo</th><th>Giacenza</th><th>Azione</th></tr></thead>
+                        <tbody id="masterStockTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="tab-ship" class="tab-content">
+        <div class="card" style="background:rgba(16, 185, 129, 0.05); border-color:rgba(16, 185, 129, 0.3);">
+            <div class="form-group" style="margin:0">
+                <label style="color:var(--green); font-size:13px;">Seleziona Struttura di Destinazione</label>
+                <select id="shipStruct" class="form-input" style="border-color:var(--green); font-weight:bold;" onchange="hubApp.loadStructData()">
+                    <option value="">-- Seleziona SPA per preparare la bolla --</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="shipWorkspace" style="display:none;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:20px;">
+                <div class="card" style="margin:0; padding:15px;">
+                    <h3 style="margin:0 0 10px 0; color:var(--accent);">Magazzino Centrale (Tu)</h3>
+                    <div style="max-height:300px; overflow-y:auto;">
+                        <table class="data-table">
+                            <thead><tr><th>Prodotto</th><th>Disp.</th><th>Aggiungi</th></tr></thead>
+                            <tbody id="shipMasterTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card" style="margin:0; padding:15px; opacity:0.8;">
+                    <h3 style="margin:0 0 10px 0; color:var(--gold);">Giacenze Struttura Selezionata</h3>
+                    <div style="max-height:300px; overflow-y:auto;">
+                        <table class="data-table">
+                            <thead><tr><th>Prodotto</th><th>Scaffale SPA</th></tr></thead>
+                            <tbody id="shipLocalTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="border:2px dashed var(--green);">
+                <h2 style="color:var(--green); margin-top:0; border:none;"><i class="material-icons-round">shopping_cart</i> Carrello Spedizione</h2>
+                <div id="cartItems"></div>
+                <button class="btn-action btn-green w-100" style="padding:15px; font-size:16px; margin-top:15px;" onclick="hubApp.dispatchShipment()">
+                    <i class="material-icons-round">local_shipping</i> SPEDISCI A MAGAZZINO STRUTTURA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-logs" class="tab-content">
+        <div class="card">
+            <h2 style="margin-top:0; border-bottom:1px solid var(--border-line); padding-bottom:10px;"><i class="material-icons-round">history</i> Movimenti Hub Master</h2>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead><tr><th>Data</th><th>Azione</th><th>Materiale</th><th>Q.tà</th><th>Destinazione/Note</th></tr></thead>
+                    <tbody id="masterLogsTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="deleteCatalogModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-box" style="text-align:center;">
+        <div style="width:60px; height:60px; background:rgba(239, 68, 68, 0.1); color:var(--red); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px auto; border:1px solid rgba(239, 68, 68, 0.3)"><i class="material-icons-round" style="font-size:32px">delete_forever</i></div>
+        <h3 style="margin-top:0; color:var(--red);">Elimina Materiale</h3>
+        <p style="color:var(--text-main); font-weight:bold; font-size:14px; margin-bottom:20px">Sei sicuro di voler eliminare definitivamente questo articolo dall'Anagrafica?</p>
+        <input type="hidden" id="delCatId">
+        <div style="display:flex; gap:10px">
+            <button class="btn-action btn-outline w-100" onclick="document.getElementById('deleteCatalogModal').style.display='none'">ANNULLA</button>
+            <button class="btn-action btn-red w-100" onclick="hubApp.confirmRemoveCatalog()">ELIMINA</button>
+        </div>
+    </div>
+</div>
+
+<div id="editCatalogModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-box">
+        <h3 style="margin-top:0; color:var(--gold); border-bottom:1px solid var(--border-line); padding-bottom:10px;">Modifica Articolo</h3>
+        <input type="hidden" id="editCatId">
+        <div class="form-group"><label>Nome Materiale</label><input type="text" id="editCatName" class="form-input"></div>
+        <div style="display:flex; gap:10px;">
+            <div class="form-group" style="flex:1"><label>Unità</label><input type="text" id="editCatUnit" class="form-input"></div>
+            <div class="form-group" style="flex:1"><label>Costo Base (€)</label><input type="number" id="editCatCost" class="form-input" step="0.01"></div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:20px">
+            <button class="btn-action btn-outline w-100" onclick="document.getElementById('editCatalogModal').style.display='none'">ANNULLA</button>
+            <button class="btn-action btn-gold w-100" onclick="hubApp.saveEditCatalog()">SALVA</button>
+        </div>
+    </div>
+</div>
+
+<div id="adjustModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-box">
+        <h3 id="adjTitle" style="margin-top:0; color:var(--accent); border-bottom:1px solid var(--border-line); padding-bottom:10px;">Movimento</h3>
+        <input type="hidden" id="adjId"> <input type="hidden" id="adjName">
+        <div class="form-group">
+            <label>Azione</label>
+            <select id="adjType" class="form-input">
+                <option value="CARICO">Carico da Fornitore (+)</option>
+                <option value="SCARICO">Scarico Manuale (-)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Quantità</label>
+            <input type="number" id="adjQty" class="form-input" placeholder="Es. 10">
+        </div>
+        <div style="display:flex; gap:10px; margin-top:20px">
+            <button class="btn-action btn-outline w-100" onclick="document.getElementById('adjustModal').style.display='none'">ANNULLA</button>
+            <button class="btn-action w-100" onclick="hubApp.confirmAdjustment()">CONFERMA</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const fbConfig = { apiKey: "AIzaSyCrDuK7SWHdbzrJR-pNpxmRwGnZgV2Dd2Y", authDomain: "touch-welness-massage.firebaseapp.com", databaseURL: "https://touch-welness-massage-default-rtdb.europe-west1.firebasedatabase.app", projectId: "touch-welness-massage", storageBucket: "touch-welness-massage.firebasestorage.app" };
+    if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+
+    window.hubApp = {
+        db: firebase.database().ref('MASTER_ADMIN_DB'),
+        catalog: {}, masterStock: {}, structures: {}, cart: {},
+
+        init: function() {
+            this.db.child('magazzino_master/catalogo').on('value', s => { this.catalog = s.val() || {}; this.renderCatalog(); this.renderShipMaster(); });
+            this.db.child('magazzino_master/giacenze').on('value', s => { this.masterStock = s.val() || {}; this.renderStock(); this.renderShipMaster(); });
+            this.db.child('magazzino_master/logs').on('value', s => { this.renderLogs(s.val() || {}); });
+            this.db.child('structures').once('value').then(s => {
+                this.structures = s.val() || {};
+                const sel = document.getElementById('shipStruct');
+                Object.values(this.structures).forEach(st => { if(!st.archived) sel.innerHTML += `<option value="${st.id}">${st.name}</option>`; });
+            });
+        },
+
+        openTab: function(t, el) { document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); document.getElementById('tab-'+t).classList.add('active'); el.classList.add('active'); },
+        showToast: function(m) { const t=document.getElementById("toastBlue"); t.innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); },
+
+        // 1. CATALOGO (Con Modifica ed Eliminazione Elegante)
+        addCatalogItem: function() {
+            const n = document.getElementById('catName').value.trim(); const u = document.getElementById('catUnit').value.trim(); const c = parseFloat(document.getElementById('catCost').value) || 0;
+            if(!n || !u) return this.showToast("Inserisci Nome e Unità.");
+            const id = "MAT" + Date.now();
+            this.db.child(`magazzino_master/catalogo/${id}`).set({ id: id, nome: n, unita: u, costo: c }).then(() => {
+                this.showToast("Materiale aggiunto al Catalogo"); document.getElementById('catName').value = ""; document.getElementById('catUnit').value = ""; document.getElementById('catCost').value = "";
+            });
+        },
+        
+        openEditCatalog: function(id) {
+            const item = this.catalog[id]; if(!item) return;
+            document.getElementById('editCatId').value = id;
+            document.getElementById('editCatName').value = item.nome;
+            document.getElementById('editCatUnit').value = item.unita;
+            document.getElementById('editCatCost').value = item.costo;
+            document.getElementById('editCatalogModal').style.display = 'flex';
+        },
+        
+        saveEditCatalog: function() {
+            const id = document.getElementById('editCatId').value;
+            const n = document.getElementById('editCatName').value.trim(); 
+            const u = document.getElementById('editCatUnit').value.trim(); 
+            const c = parseFloat(document.getElementById('editCatCost').value) || 0;
+            if(!n || !u) return this.showToast("Inserisci Nome e Unità.");
+            
+            this.db.child(`magazzino_master/catalogo/${id}`).update({ nome: n, unita: u, costo: c }).then(() => {
+                this.showToast("Articolo modificato con successo!"); 
+                document.getElementById('editCatalogModal').style.display = 'none';
+            });
+        },
+
+        removeCatalog: function(id) {
+            document.getElementById('delCatId').value = id;
+            document.getElementById('deleteCatalogModal').style.display = 'flex';
+        },
+        
+        confirmRemoveCatalog: function() {
+            const id = document.getElementById('delCatId').value;
+            this.db.child(`magazzino_master/catalogo/${id}`).remove().then(() => {
+                this.showToast("Articolo eliminato definitivamente.");
+                document.getElementById('deleteCatalogModal').style.display = 'none';
+            });
+        },
+
+        renderCatalog: function() {
+            const tb = document.getElementById('catalogTable'); tb.innerHTML = "";
+            Object.values(this.catalog).forEach(c => {
+                tb.innerHTML += `<tr><td><b>${c.nome}</b> <span style="color:var(--text-muted); font-size:11px;">(${c.unita})</span></td><td style="text-align:right">${c.costo.toFixed(2)} €</td><td style="text-align:right; width:100px; white-space:nowrap;"><button class="btn-icon" onclick="hubApp.openEditCatalog('${c.id}')" title="Modifica"><i class="material-icons-round" style="color:var(--gold)">edit</i></button> <button class="btn-icon del" onclick="hubApp.removeCatalog('${c.id}')" title="Elimina"><i class="material-icons-round">delete</i></button></td></tr>`;
+            });
+        },
+
+        // 2. GIACENZA MASTER
+        renderStock: function() {
+            const tb = document.getElementById('masterStockTable'); tb.innerHTML = "";
+            Object.values(this.catalog).forEach(c => {
+                const qty = this.masterStock[c.id] ? this.masterStock[c.id].qty : 0;
+                const cColor = qty <= 0 ? 'var(--red)' : 'var(--green)';
+                tb.innerHTML += `<tr><td><b>${c.nome}</b></td><td><b style="color:${cColor}; font-size:16px;">${qty}</b> ${c.unita}</td><td style="text-align:right"><button class="btn-action btn-sm btn-outline" onclick="hubApp.openAdjust('${c.id}', '${c.nome.replace(/'/g, "\\'")}')">CARICO / SCARICO</button></td></tr>`;
+            });
+        },
+        openAdjust: function(id, name) { document.getElementById('adjId').value = id; document.getElementById('adjName').value = name; document.getElementById('adjTitle').innerText = name; document.getElementById('adjQty').value = ""; document.getElementById('adjustModal').style.display='flex'; },
+        confirmAdjustment: function() {
+            const id = document.getElementById('adjId').value; const name = document.getElementById('adjName').value; const type = document.getElementById('adjType').value; const qty = parseInt(document.getElementById('adjQty').value);
+            if(!qty || qty <= 0) return this.showToast("Quantità non valida");
+            const currentQty = this.masterStock[id] ? this.masterStock[id].qty : 0;
+            const newQty = type === 'CARICO' ? currentQty + qty : currentQty - qty;
+            
+            this.db.child(`magazzino_master/giacenze/${id}`).set({ qty: newQty });
+            this.db.child('magazzino_master/logs').push({ date: new Date().toLocaleString('it-IT'), action: type, itemNome: name, qty: qty, dest: "Master (Regolazione Manuale)" });
+            this.showToast(`Movimento registrato: ${type}`); document.getElementById('adjustModal').style.display='none';
+        },
+
+        // 3. SPEDIZIONI E CARRELLO
+        loadStructData: function() {
+            const sid = document.getElementById('shipStruct').value;
+            if(!sid) { document.getElementById('shipWorkspace').style.display = 'none'; return; }
+            document.getElementById('shipWorkspace').style.display = 'block'; this.cart = {}; this.renderCart();
+            
+            this.db.child(`structures_data/${sid}/products`).on('value', snap => {
+                const prods = snap.val() || {}; const tb = document.getElementById('shipLocalTable'); tb.innerHTML = "";
+                if(Object.keys(prods).length===0) tb.innerHTML = "<tr><td colspan='2'>Nessuna merce in struttura.</td></tr>";
+                Object.values(prods).forEach(p => { tb.innerHTML += `<tr><td>${p.name}</td><td><b style="color:var(--gold)">${p.qty}</b> ${p.unit}</td></tr>`; });
+            });
+        },
+        renderShipMaster: function() {
+            const tb = document.getElementById('shipMasterTable'); if(!tb) return; tb.innerHTML = "";
+            Object.values(this.catalog).forEach(c => {
+                const qty = this.masterStock[c.id] ? this.masterStock[c.id].qty : 0;
+                tb.innerHTML += `<tr><td><b>${c.nome}</b></td><td><b style="color:var(--accent)">${qty}</b></td><td style="text-align:right"><button class="btn-icon" style="color:var(--green)" onclick="hubApp.addToCart('${c.id}', '${c.nome.replace(/'/g, "\\'")}', ${qty}, '${c.unita}', ${c.costo})"><i class="material-icons-round">add_shopping_cart</i></button></td></tr>`;
+            });
+        },
+        addToCart: function(id, name, max, unit, cost) {
+            if(max <= 0) return this.showToast("Giacenza esaurita nell'Hub!");
+            if(!this.cart[id]) this.cart[id] = { id: id, name: name, max: max, unit: unit, cost: cost, qty: 1 };
+            else if(this.cart[id].qty < max) this.cart[id].qty++;
+            this.renderCart();
+        },
+        updateCartQty: function(id, val) { const q = parseInt(val); if(q > 0 && q <= this.cart[id].max) this.cart[id].qty = q; else this.cart[id].qty = this.cart[id].max; this.renderCart(); },
+        removeFromCart: function(id) { delete this.cart[id]; this.renderCart(); },
+        renderCart: function() {
+            const cDiv = document.getElementById('cartItems'); cDiv.innerHTML = "";
+            if(Object.keys(this.cart).length === 0) { cDiv.innerHTML = "<div style='color:var(--text-muted); text-align:center; padding:20px;'>Il carrello è vuoto.</div>"; return; }
+            Object.values(this.cart).forEach(c => {
+                cDiv.innerHTML += `<div class="cart-row"><div><b>${c.name}</b> <span style="font-size:11px; color:var(--text-muted)">Max: ${c.max}</span></div><div style="display:flex; align-items:center; gap:10px;"><input type="number" class="form-input" style="width:80px; margin:0;" value="${c.qty}" onchange="hubApp.updateCartQty('${c.id}', this.value)"><button class="btn-icon" onclick="hubApp.removeFromCart('${c.id}')"><i class="material-icons-round">delete</i></button></div></div>`;
+            });
+        },
+        dispatchShipment: function() {
+            const sid = document.getElementById('shipStruct').value;
+            const items = Object.values(this.cart);
+            if(!sid || items.length === 0) return this.showToast("Carrello vuoto o struttura non selezionata!");
+            const structName = document.getElementById('shipStruct').options[document.getElementById('shipStruct').selectedIndex].text;
+            
+            let promises = [];
+            items.forEach(item => {
+                const newMasterQty = this.masterStock[item.id].qty - item.qty;
+                promises.push(this.db.child(`magazzino_master/giacenze/${item.id}`).set({ qty: newMasterQty }));
+                promises.push(this.db.child('magazzino_master/logs').push({ date: new Date().toLocaleString('it-IT'), action: "SPEDITO", itemNome: item.name, qty: item.qty, dest: structName }));
+            });
+
+            promises.push(this.db.child(`structures_data/${sid}/in_transit`).push({
+                date: new Date().toLocaleString('it-IT'),
+                status: 'PENDING',
+                items: items
+            }));
+
+            Promise.all(promises).then(() => {
+                this.showToast("📦 Spedizione Inviata con Successo!");
+                this.cart = {}; this.renderCart();
+            });
+        },
+
+        // 4. REGISTRO MASTER
+        renderLogs: function(logs) {
+            const tb = document.getElementById('masterLogsTable'); tb.innerHTML = "";
+            const logArr = Object.values(logs).reverse();
+            if(logArr.length === 0) { tb.innerHTML = "<tr><td colspan='5'>Nessun movimento.</td></tr>"; return; }
+            logArr.forEach(l => {
+                const c = l.action === 'CARICO' ? 'var(--green)' : (l.action === 'SCARICO' ? 'var(--red)' : 'var(--accent)');
+                tb.innerHTML += `<tr><td style="color:var(--text-muted); font-size:12px;">${l.date}</td><td><b style="color:${c}">${l.action}</b></td><td>${l.itemNome}</td><td><b>${l.qty}</b></td><td>${l.dest}</td></tr>`;
+            });
+        }
+    };
+
+    window.onload = () => window.hubApp.init();
+</script>
+</body>
+</html>

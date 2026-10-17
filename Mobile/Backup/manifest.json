@@ -1,0 +1,21 @@
+{
+  "name": "Touch Wellness",
+  "short_name": "TouchWellness",
+  "description": "Gestionale per centri benessere e spa",
+  "start_url": "Mobile.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

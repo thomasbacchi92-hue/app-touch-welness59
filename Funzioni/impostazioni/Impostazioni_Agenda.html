@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Impostazioni Agenda - TOUCH WELNESS</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+  :root { --bg-body: #0f172a; --bg-panel: #1e293b; --border-line: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #38bdf8; --gold: #fbbf24; --purple: #a855f7; --red: #ef4444; }
+  :root.light-theme { --bg-body: #f8fafc; --bg-panel: #ffffff; --border-line: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+  
+  body { font-family: -apple-system, sans-serif; background: var(--bg-body); margin: 0; display: flex; flex-direction: column; height: 100vh; color: var(--text-main); }
+  * { box-sizing: border-box; }
+
+  /* Navbar styling from Component_Navbar.js applied here for standalone view */
+  .tw-navbar-uni { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.95) 100%); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding: 10px 15px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.6); z-index: 1000; flex-shrink: 0; gap: 15px; }
+  .tw-navbar-uni .nav-wing { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .tw-navbar-uni .left-wing { justify-content: flex-start; } .tw-navbar-uni .right-wing { justify-content: flex-end; }
+  .tw-navbar-uni .nav-btn { flex: 1 1 0; min-width: 0; background: rgba(15, 23, 42, 0.4); color: var(--text-main); border: 1px solid rgba(255,255,255,0.05); padding: 10px 8px; border-radius: 8px; font-weight: 700; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+  .tw-navbar-uni .nav-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  .tw-navbar-uni .nav-btn i { font-size: 16px; color: var(--text-muted); transition: 0.2s; flex-shrink: 0; }
+  .tw-navbar-uni .nav-btn:hover { background: rgba(30, 41, 59, 0.8); border-color: rgba(56, 189, 248, 0.6); color: #fff; transform: translateY(-2px); }
+  .tw-navbar-uni .nav-btn:hover i { color: var(--accent); }
+  .tw-navbar-uni .nav-btn.btn-main { background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.5); color: #fff; }
+  .tw-navbar-uni .nav-btn.btn-main i { color: var(--accent); }
+  .tw-navbar-uni .nav-center { display: flex; align-items: center; justify-content: center; flex: 0 1 auto; min-width: max-content; }
+  .tw-navbar-uni #mainDateControls { display: flex; align-items: stretch; background: var(--bg-panel); border: 1px solid var(--border-line); border-radius: 4px; overflow: hidden; height: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .tw-navbar-uni .btn-arrow { background: rgba(0,0,0,0.2); border: none; color: var(--text-muted); cursor: pointer; padding: 0 12px; transition: 0.2s; font-size:24px; display:flex; align-items:center; justify-content:center; }
+  .tw-navbar-uni .btn-arrow:hover { color: var(--accent); background: rgba(56, 189, 248, 0.1); }
+  .tw-navbar-uni .date-selector-pro { display: flex; align-items: center; justify-content: center; gap: 8px; background: transparent; padding: 0 20px; cursor: pointer; transition: 0.2s; border-radius: 0; border:none; color:var(--text-main); font-weight:900;}
+  .tw-navbar-uni .date-selector-pro span { font-size: 14px; white-space: nowrap; letter-spacing: 0.5px; }
+  .tw-navbar-uni .date-selector-pro i { font-size: 18px; color: var(--accent); }
+  .tw-navbar-uni .gear-btn { width: 40px; height: 40px; flex: none; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+  .tw-navbar-uni .gear-btn i { color: #a855f7; font-size: 20px; transition: 0.2s; }
+  .tw-navbar-uni .gear-btn:hover { background: #a855f7; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(168, 85, 247, 0.4); }
+  .tw-navbar-uni .gear-btn:hover i { color: #fff; }
+  @media (max-width: 768px) { .tw-navbar-uni .nav-wing { display: none; } }
+
+  .main-tabs-container { background: var(--bg-panel); border-bottom: 2px solid var(--border-line); display: flex; justify-content: center; padding: 0 20px; flex-shrink: 0; }
+  .main-tab-btn { background: transparent; border: none; color: var(--text-muted); font-size: 14px; font-weight: 900; padding: 20px 30px; cursor: pointer; text-transform: uppercase; border-bottom: 3px solid transparent; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+  .main-tab-btn.active { color: var(--purple); border-bottom-color: var(--purple); }
+
+  .main-content { flex: 1; padding: 30px 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+  .settings-container { width: 100%; max-width: 1200px; }
+  
+  .tab-view { display: none; width: 100%; animation: fadeIn 0.3s ease; }
+  .tab-view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; }
+  .settings-card { background: var(--bg-panel); border: 1px solid var(--border-line); border-radius: 16px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; transition: 0.3s; }
+  .settings-card h2 { margin-top: 0; font-size: 16px; color: var(--purple); text-transform: uppercase; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-line); padding-bottom: 15px; margin-bottom: 20px; }
+  
+  .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px dashed var(--border-line); }
+  .switch-row b { font-size: 14px; display:block;} .switch-row span { font-size: 11px; color: var(--text-muted); }
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-line); transition: .4s; border-radius: 24px; }
+  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+  input:checked + .slider { background-color: var(--purple); } input:checked + .slider:before { transform: translateX(20px); }
+  
+  .form-input { width: 100%; padding: 12px; border: 1px solid var(--border-line); border-radius: 8px; font-size: 14px; background: var(--bg-body); color: var(--text-main); outline:none; }
+  .btn-save { background: var(--purple); color: #fff; width: 100%; padding: 15px; border-radius: 10px; font-weight: 900; cursor: pointer; border: none; font-size: 14px; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:8px;}
+
+  .logic-cards-row { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+  .logic-card { flex: 1; min-width: 140px; background: var(--bg-body); border: 2px solid var(--border-line); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; position: relative; overflow: hidden; }
+  .logic-card:hover:not(.disabled) { border-color: var(--accent); background: rgba(56, 189, 248, 0.05); transform: translateY(-3px); }
+  .logic-card.active { border-color: var(--accent); background: rgba(56, 189, 248, 0.1); }
+  .logic-card.active i, .logic-card.active b { color: var(--accent); }
+  .logic-card i { font-size: 28px; color: var(--text-muted); transition: 0.2s; }
+  .logic-card b { font-size: 13px; color: var(--text-main); text-transform: uppercase; transition: 0.2s; }
+
+  .color-trigger-btn { display: flex; align-items: center; justify-content: space-between; background: var(--bg-body); border: 1px solid var(--border-line); padding: 10px 15px; border-radius: 8px; cursor: pointer; transition: 0.2s; min-width: 180px; }
+  .color-trigger-btn:hover { border-color: var(--accent); }
+  .color-trigger-indicator { width: 20px; height: 20px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); }
+  .color-trigger-name { font-size: 12px; font-weight: bold; color: var(--text-main); flex: 1; text-align: left; margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+
+  .palette-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
+  .palette-item { display: flex; align-items: center; gap: 12px; background: var(--bg-body); border: 1px solid var(--border-line); padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+  .palette-item:hover { background: rgba(255,255,255,0.05); border-color: var(--text-main); transform: translateX(3px); }
+  .palette-swatch { width: 24px; height: 24px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); flex-shrink:0; }
+  .palette-name { font-size: 13px; font-weight: bold; color: var(--text-main); }
+  
+  /* Stili per le modali "Premium" */
+  .tw-premium-modal {
+      background: rgba(30, 41, 59, 0.95) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-radius: 16px !important;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+      padding: 30px !important;
+      color: #fff;
+      box-sizing: border-box;
+  }
+  .tw-modal-icon-container {
+      width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;
+  }
+</style>
+<script>if(localStorage.getItem('tw_theme') === 'light') document.documentElement.classList.add('light-theme');</script>
+</head>
+<body>
+
+<!-- COMPONENTE TOAST (IL RESPONSABILE DELLE NOTIFICHE) -->
+<div id="toastBlue" style="display:none; position:fixed; z-index:9999; right:30px; bottom:30px; background:var(--purple); color:#fff; padding:12px 24px; border-radius:8px; font-weight:bold; box-shadow:0 4px 15px rgba(0,0,0,0.4); pointer-events:none; transition: opacity 0.3s; align-items:center; gap:8px;">
+    <i class="material-icons-round" style="font-size:20px;">info</i><span id="toastMsg">Notifica</span>
+</div>
+<script>
+    window.showToast = function(msg) {
+        const x = document.getElementById("toastBlue");
+        if(x) {
+            document.getElementById("toastMsg").innerText = msg;
+            x.style.display = "flex"; x.style.opacity = "1";
+            setTimeout(() => { x.style.opacity = "0"; setTimeout(() => x.style.display="none", 300); }, 3000);
+        }
+    };
+</script>
+
+<div id="tw-universal-navbar">
+    <div class="tw-navbar-uni">
+        <div class="nav-wing left-wing">
+            <button type="button" class="nav-btn" onclick="window.location.href='../../index.html?view=radar'"><i class="material-icons-round">radar</i> <span>TROVA POSTO</span></button>
+            <button type="button" class="nav-btn" onclick="window.location.href='../../Anagrafica.html'"><i class="material-icons-round">contact_page</i> <span>CRM</span></button>
+            <button type="button" class="nav-btn" onclick="window.location.href='../../funzioni/Lista.html'"><i class="material-icons-round">view_list</i> <span>LISTA</span></button>
+            <button type="button" class="nav-btn" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.5); color: #fff;" onclick="window.location.href='../../OperatoriDisp/index.html'"><i class="material-icons-round" style="color: var(--purple);">groups</i> <span>OPERATORI</span></button>
+            <button type="button" class="nav-btn" onclick="window.location.href='../../index.html'"><i class="material-icons-round">calendar_today</i> <span>APPUNTAMENTI</span></button>
+        </div>
+        <div class="nav-center">
+            <div id="mainDateControls">
+                <button type="button" class="btn-arrow"><i class="material-icons-round">chevron_left</i></button>
+                <div class="date-selector-pro">
+                    <i class="material-icons-round">calendar_today</i><span id="fakeDateText">Oggi</span>
+                </div>
+                <button type="button" class="btn-arrow"><i class="material-icons-round">chevron_right</i></button>
+            </div>
+        </div>
+        <div class="nav-wing right-wing">
+            <button type="button" class="nav-btn" onclick="window.location.href='../../Piscina/Piscina_GUI.html'"><i class="material-icons-round">pool</i> <span>SPA</span></button>
+            <button type="button" class="nav-btn"><i class="material-icons-round">lock_person</i> <span>AREA RISERVATA</span></button>
+            <button type="button" class="nav-btn" onclick="window.location.href='../../chat.html'"><i class="material-icons-round">forum</i> <span>CHAT</span></button>
+            <button type="button" class="nav-btn btn-main" onclick="window.location.href='../../Gestione.html'"><i class="material-icons-round" style="color: var(--accent);">settings</i> <span>IMPOSTAZIONI</span></button>
+        </div>
+    </div>
+</div>
+
+<div class="main-tabs-container">
+    <button id="tabBtn-config" class="main-tab-btn active" onclick="switchMainTab('config')"><i class="material-icons-round">tune</i> Config. & Sconti</button>
+    <button id="tabBtn-turni" class="main-tab-btn" onclick="switchMainTab('turni')"><i class="material-icons-round">calendar_month</i> Planning Turni</button>
+    <button id="tabBtn-grafica" class="main-tab-btn" onclick="switchMainTab('grafica')"><i class="material-icons-round">palette</i> Grafica Appuntamenti</button>
+</div>
+
+<div class="main-content">
+    <div class="settings-container">
+        
+        <div id="view-config" class="tab-view active">
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <h2><i class="material-icons-round">euro</i> Limiti Operativi</h2>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:var(--bg-body); border-radius:8px; border:1px solid var(--border-line);">
+                        <div><b style="color:var(--gold);">Tetto Massimo Sconti (€)</b><br><span style="font-size:11px; color:var(--text-muted);">Sconto massimo consentito ai dipendenti senza password. Usa 0 per vietarli tutti.</span></div>
+                        <input type="number" id="ui_max_discount" class="form-input" style="width:100px; text-align:center; font-weight:bold; font-size:18px; border-color:var(--gold);" value="0">
+                    </div>
+                </div>
+                
+                <div class="settings-card">
+                    <h2><i class="material-icons-round">block</i> Impostazioni Blocco Cabina</h2>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:var(--bg-body); border-radius:8px; border:1px solid var(--border-line);">
+                        <div><b style="color:var(--accent);">Tempistica Blocco (Minuti)</b><br><span style="font-size:11px; color:var(--text-muted);">Durata predefinita quando crei un blocco in agenda col tasto destro.</span></div>
+                        <input type="number" id="ui_block_duration" class="form-input" style="width:100px; text-align:center; font-weight:bold; font-size:18px; border-color:var(--accent);" value="60">
+                    </div>
+                </div>
+                <div class="settings-card" style="grid-column: 1 / -1;">
+
+                    <h2><i class="material-icons-round">visibility</i> Visibilità Campi Agenda</h2>
+                    <div id="agendaUiSwitchesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 0 20px;"></div>
+                    <button class="btn-save" onclick="window.configModule.saveUISettings()"><i class="material-icons-round">save</i> Salva Configurazione</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-turni" class="tab-view">
+            <div class="settings-grid">
+                <div class="settings-card" style="grid-column: 1 / -1;">
+                    <h2><i class="material-icons-round">group</i> Organizzazione Staff</h2>
+                    <div style="margin-bottom:15px; max-width: 400px;">
+                        <label style="font-size:12px; color:var(--text-muted); font-weight:bold;">Seleziona Collaboratore</label>
+                        <select id="turniOpSelect" class="form-input" style="font-weight:bold; color:var(--purple);" onchange="window.turniModule.renderTurniGrid()"><option value="">Caricamento...</option></select>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-bottom:20px; max-width: 600px;">
+                        <button class="btn-save" style="background:var(--bg-body); color:var(--text-main); border:1px solid var(--border-line); flex:1; margin-top:0;" onclick="window.turniModule.changeWeek(-1)">Sett. Prec.</button>
+                        <div id="adminWeekLabel" style="flex:2; text-align:center; padding:15px; font-weight:bold; color:var(--accent); background:rgba(56, 189, 248, 0.1); border-radius:8px;">Caricamento...</div>
+                        <button class="btn-save" style="background:var(--bg-body); color:var(--text-main); border:1px solid var(--border-line); flex:1; margin-top:0;" onclick="window.turniModule.changeWeek(1)">Sett. Succ.</button>
+                    </div>
+                    <div id="turniGridContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:10px;"></div>
+                    <button class="btn-save" onclick="window.turniModule.saveTurniWeek()" style="max-width: 300px;"><i class="material-icons-round">save</i> Salva Turni</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-grafica" class="tab-view">
+            <div class="settings-grid">
+                <div class="settings-card" style="grid-column: 1 / -1;">
+                    <h2><i class="material-icons-round">color_lens</i> Motore Grafico</h2>
+                    
+                    <div style="background:rgba(56, 189, 248, 0.1); border:1px solid var(--accent); padding:20px; border-radius:12px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <b style="color:var(--accent); font-size:16px;">Usa Colori di Default</b><br>
+                            <span style="font-size:12px; color:var(--text-muted);">Attiva per ignorare le logiche personalizzate e usare i colori standard (Azzurro/Viola).</span>
+                        </div>
+                        <label class="switch" style="transform: scale(1.2); transform-origin: right;"><input type="checkbox" id="graficaPresetToggle" onchange="window.graficaModule.togglePreset()"><span class="slider"></span></label>
+                    </div>
+
+                    <div id="graficaLogicWrapper" style="transition: 0.3s; position: relative;">
+                        <h3 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px;">Scegli il Criterio di Colorazione</h3>
+                        <div class="logic-cards-row">
+                            <div class="logic-card active" id="cardLogicServizio" onclick="window.graficaModule.switchLogic('servizio')">
+                                <i class="material-icons-round">spa</i><b>Per Trattamento</b>
+                            </div>
+                            <div class="logic-card" id="cardLogicDurata" onclick="window.graficaModule.switchLogic('durata')">
+                                <i class="material-icons-round">timer</i><b>Per Tempistica</b>
+                            </div>
+                            <div class="logic-card" id="cardLogicTipologia" onclick="window.graficaModule.switchLogic('tipologia')">
+                                <i class="material-icons-round">category</i><b>Per Tipologia</b>
+                            </div>
+                        </div>
+
+                        <div id="graficaDynamicRows" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:15px; margin-top:20px;">
+                            <div style="text-align:center; padding:20px; color:var(--text-muted);">Caricamento dati...</div>
+                        </div>
+
+                        <!-- Sottomodulo Priorità Trasversale -->
+                        <h3 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin-top:30px; margin-bottom:10px; border-top:1px dashed var(--border-line); padding-top:20px;"><i class="material-icons-round" style="font-size:14px; vertical-align:middle;">flag</i> Colori di Priorità</h3>
+                        <div id="graficaPriorityRows" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:15px;">
+                             <!-- Verrà popolato da JS -->
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; gap:10px; margin-top:30px;">
+                        <button class="btn-save" onclick="window.graficaModule.saveAll()" style="flex:1; height: 50px; margin: 0;"><i class="material-icons-round">save</i> Salva Logica e Colori</button>
+                        <button class="btn-save btn-outline" onclick="window.graficaModule.resetColors()" style="width: 50px; height: 50px; flex-shrink: 0; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center;" title="Ripristina Colori Predefiniti">
+                            <i class="material-icons-round" style="font-size: 24px;">replay</i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="modalColorPalette" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10001; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
+    <div style="background:var(--bg-panel); padding:30px; border-radius:16px; width:90%; max-width:550px; border:1px solid var(--border-line); box-shadow:0 10px 40px rgba(0,0,0,0.6);">
+        <h3 style="color:var(--text-main); margin-top:0; border-bottom:1px solid var(--border-line); padding-bottom:15px; font-size:18px; text-transform:uppercase; display:flex; align-items:center; justify-content:space-between;">
+            <span><i class="material-icons-round" style="vertical-align:middle; color:var(--accent); margin-right:8px;">palette</i> Seleziona Colore</span>
+            <i class="material-icons-round" style="cursor:pointer; color:var(--text-muted);" onclick="document.getElementById('modalColorPalette').style.display='none'">close</i>
+        </h3>
+        <input type="hidden" id="paletteTargetId">
+        <input type="hidden" id="paletteTargetType">
+        
+        <div id="paletteGridContainer" class="palette-grid"></div>
+
+        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px dashed var(--border-line); display:flex; align-items:center; justify-content:space-between;">
+            <b style="font-size:13px; color:var(--text-muted);"><i class="material-icons-round" style="vertical-align:middle; font-size:16px;">colorize</i> Colore Custom HTML:</b>
+            <input type="color" id="paletteCustomPicker" style="width:50px; height:40px; border:none; cursor:pointer; background:transparent;" onchange="window.graficaModule.applyCustomColor(this.value)">
+        </div>
+    </div>
+</div>
+
+<script>
+    const localStructId = localStorage.getItem("tw_structure_id");
+    if(!localStructId) window.location.href="../../login.html";
+    
+    const fbConfig = { apiKey: "AIzaSyCrDuK7SWHdbzrJR-pNpxmRwGnZgV2Dd2Y", authDomain: "touch-welness-massage.firebaseapp.com", databaseURL: "https://touch-welness-massage-default-rtdb.europe-west1.firebasedatabase.app", projectId: "touch-welness-massage", storageBucket: "touch-welness-massage.firebasestorage.app" };
+    if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+    window.twStructId = localStructId;
+
+    function switchMainTab(tabId) {
+        document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+        document.getElementById('tabBtn-' + tabId).classList.add('active');
+        document.getElementById('view-' + tabId).classList.add('active');
+    }
+</script>
+
+<script src="config.js"></script>
+<script src="turni.js"></script>
+<script src="grafica_appuntamenti.js"></script>
+
+</body>
+</html>

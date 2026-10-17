@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Centro Comando SPA - TOUCH WELNESS</title>
+
+<script>
+    if(window.location.search.includes('mode=tab')) {
+        // Se caricato dentro Admin, nascondo l'header e FORZO la visibilità dell'area di lavoro
+        document.write('<style>#topNavbar, #globalSelectCard { display: none !important; } body { background: transparent !important; } .main-content { padding: 0 !important; } #workspaceArea { display: block !important; }</style>');
+    }
+    if(localStorage.getItem('tw_admin_theme') === 'light' || localStorage.getItem('tw_theme') === 'light') document.documentElement.classList.add('light-theme');
+</script>
+
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+  :root { --bg-body: #0f172a; --bg-panel: #1e293b; --border-line: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #38bdf8; --gold: #fbbf24; --green: #10b981; --red: #ef4444; --purple: #a855f7; }
+  :root.light-theme { --bg-body: #f8fafc; --bg-panel: #ffffff; --border-line: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+  
+  body { font-family: -apple-system, sans-serif; background: var(--bg-body); margin: 0; color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+  * { box-sizing: border-box; }
+  
+  .navbar { background: var(--bg-panel); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); position: sticky; top: 0; z-index: 100; }
+  .navbar h1 { margin: 0; font-size: 18px; color: var(--accent); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
+  
+  .main-content { flex: 1; padding: 25px; width: 100%; max-width: 1000px; margin: 0 auto; }
+  .card { background: var(--bg-panel); border-radius: 16px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid var(--border-line); margin-bottom: 30px; }
+  
+  h2 { margin-top: 0; color: var(--gold); font-size: 18px; border-bottom: 1px solid var(--border-line); padding-bottom: 15px; margin-bottom: 25px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+  h3 { margin-top: 0; color: var(--accent); font-size: 14px; text-transform: uppercase; margin-bottom: 15px; }
+
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom:15px; }
+  .form-group label { display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+  .form-input { width: 100%; padding: 14px; border: 1px solid var(--border-line); border-radius: 10px; font-size: 14px; background: var(--bg-body); color: var(--text-main); outline: none; transition: 0.3s; color-scheme:dark;}
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); }
+
+  .btn-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 24px; background: var(--accent); color: #0f172a; border: none; border-radius: 10px; font-weight: 900; cursor: pointer; transition: 0.2s; }
+  .btn-action:hover { transform: translateY(-2px); filter: brightness(1.1); }
+  .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-line); }
+  .btn-gold { background: var(--gold); color: #0f172a; }
+  .btn-green { background: var(--green); color: white; }
+  .btn-sm { padding: 8px 12px; font-size: 11px; margin:0; }
+  .w-100 { width: 100%; }
+
+  /* SOTTOMENU CALAMITATO */
+  .tabs-header { position: sticky; top: 0; z-index: 1000; display: flex; gap: 10px; margin-bottom: 25px; background: var(--bg-panel); padding: 15px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.4); overflow-x: auto; border: 1px solid var(--border-line); }
+  .tab-btn { padding: 10px 15px; background: none; border: none; cursor: pointer; font-weight: bold; color: var(--text-muted); border-bottom: 3px solid transparent; white-space: nowrap; transition: 0.2s; }
+  .tab-btn:hover { color: var(--text-main); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; animation: fadeIn 0.3s ease; }
+  .tab-content.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-line); transition: .4s; border-radius: 24px; }
+  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow:0 2px 4px rgba(0,0,0,0.2);}
+  input:checked + .slider { background-color: var(--green); }
+  input:checked + .slider:before { transform: translateX(20px); }
+
+  .ui-switches-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
+  .switch-row-compact { display: flex; align-items: center; justify-content: space-between; background: var(--bg-body); padding: 15px; border-radius: 8px; border: 1px solid var(--border-line); }
+  .switch-row-compact b { font-size: 13px; color: var(--text-main); display: block; }
+  .switch-row-compact span { font-size: 10px; color: var(--text-muted); }
+
+  /* CABINE A QUADRATI */
+  .cabine-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
+  .cabina-sq { background: var(--bg-body); border: 1px solid var(--border-line); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px; text-align:center; position:relative;}
+  .day-toggle { display: inline-block; width: 28px; height: 28px; text-align: center; line-height: 26px; border-radius: 50%; background: var(--bg-panel); border: 1px solid var(--border-line); color: var(--text-muted); font-size: 11px; font-weight: bold; cursor: pointer; user-select: none; transition:0.2s;}
+  .day-toggle.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+  .btn-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; display:flex; align-items:center; justify-content:center; padding:5px; border-radius:50%; transition:0.2s; }
+  .btn-icon:hover { color: var(--red); background: rgba(239, 68, 68, 0.1); }
+
+  /* SCHEDE OPERATORI */
+  .op-cards-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 25px; }
+  .op-card { background: var(--bg-body); border: 1px solid var(--border-line); border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; user-select: none; }
+  .op-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .op-card.active { border-color: var(--accent); background: rgba(56, 189, 248, 0.1); box-shadow: 0 0 0 2px var(--accent); }
+  .op-card.manager { border-bottom: 3px solid var(--gold); }
+  .op-card-name { font-weight: bold; color: var(--text-main); font-size: 14px; margin-bottom: 5px; text-transform:uppercase;}
+  .op-card-nick { font-size: 11px; color: var(--text-muted); }
+
+  /* PLANNING A QUADRATI (TURNI) */
+  .week-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 15px; }
+  .day-card { background: var(--bg-panel); border: 1px solid var(--border-line); border-radius: 12px; padding: 15px 10px; text-align: center; transition: 0.2s; display:flex; flex-direction:column; justify-content:space-between; min-height:160px;}
+  .day-card.lavoro { border-top: 5px solid var(--accent); }
+  .day-card.libero { border-top: 5px solid var(--text-muted); opacity: 0.7; }
+  .day-card.malattia { border-top: 5px solid var(--red); }
+  .day-card.ferie { border-top: 5px solid var(--green); }
+  
+  .status-btn-group { display: flex; justify-content: center; gap: 5px; margin: 10px 0; }
+  .s-btn { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; font-weight: 900; font-size: 14px; cursor: pointer; transition: 0.2s; background: var(--bg-body); color: var(--text-muted); display:flex; align-items:center; justify-content:center;}
+  .s-btn.active.p { background: var(--accent); color: #000; border-color: var(--accent); }
+  .s-btn.active.r { background: var(--text-muted); color: #fff; border-color: var(--text-muted); }
+  .s-btn.active.m { background: var(--red); color: #fff; border-color: var(--red); }
+
+  .preset-btn { background: var(--bg-body); border: 1px solid var(--border-line); color: var(--text-main); font-size: 10px; font-weight: bold; padding: 6px; border-radius: 6px; width: 100%; margin-bottom: 5px; cursor: pointer; transition:0.2s;}
+  .preset-btn:hover { border-color:var(--accent); }
+  .preset-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  .custom-time-box { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; border: 1px dashed var(--border-line); margin-top:5px; text-align:left;}
+  .custom-time-box input { background: transparent; border: none; color: var(--text-main); font-weight: bold; font-size: 13px; outline: none; color-scheme: dark; width: 100%; margin:0; padding:2px;}
+  .custom-lbl { font-size:9px; color:var(--text-muted); font-weight:bold; text-transform:uppercase; margin-top:4px;}
+
+  /* MODALI & GRAFICI 3D */
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding:15px;}
+  .modal-box { background: var(--bg-panel); padding: 30px; border-radius: 20px; width: 100%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 1px solid var(--border-line); }
+  .modal-box.purple { border-color: var(--purple); }
+  
+  .graph-container { display: flex; align-items: flex-end; justify-content: space-around; height: 250px; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; position: relative; margin-top: 20px; border: 1px solid var(--border-line); }
+  .glass-ceiling { position: absolute; left: 0; width: 100%; background: rgba(239, 68, 68, 0.2); border-bottom: 2px dashed var(--red); z-index: 10; pointer-events: none; }
+  .bar-3d-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 5; width:40px; }
+  .bar-3d { width: 100%; background: linear-gradient(to top, #0284c7, var(--accent)); border-radius: 4px 4px 0 0; transition: 0.5s; box-shadow: 2px 0 5px rgba(0,0,0,0.5); }
+  .bar-3d.danger { background: linear-gradient(to top, #b91c1c, var(--red)); box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+  .bar-label { font-size: 10px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; }
+
+  #toastBlue { visibility: hidden; min-width: 280px; background: var(--accent); color: #0f172a; text-align: center; border-radius: 12px; padding: 16px; position: fixed; right: 30px; bottom: 30px; z-index: 9999; font-weight: 900; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+  #toastBlue.show { visibility: visible; animation: slideUp 0.5s forwards; }
+  @keyframes slideUp { from { opacity: 0; bottom: 0; } to { opacity: 1; bottom: 30px; } }
+</style>
+</head>
+<body>
+<div id="toastBlue">Operazione completata!</div>
+
+<div id="pdfExportModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-box purple">
+        <h3 style="color:var(--purple); margin-top:0; border:none; font-size:22px;"><i class="material-icons-round" style="vertical-align:middle;">picture_as_pdf</i> Esportazione PDF</h3>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:25px;">Scegli il livello di dettaglio per la generazione del planning della settimana corrente.</p>
+        
+        <button class="btn-action w-100" style="margin-bottom:15px; background:rgba(168, 85, 247, 0.1); color:var(--purple); border:1px solid var(--purple);" onclick="if(window.turniApp) turniApp.exportPDF('single')">
+            <i class="material-icons-round">person</i> ESPORTA SINGOLO OPERATORE
+        </button>
+        <button class="btn-action w-100" style="background:var(--purple); color:white;" onclick="if(window.turniApp) turniApp.exportPDF('team')">
+            <i class="material-icons-round">groups</i> ESPORTA TUTTO IL TEAM (MATRICE)
+        </button>
+        <button class="btn-action btn-outline w-100" style="margin-top:20px;" onclick="document.getElementById('pdfExportModal').style.display='none'">ANNULLA</button>
+    </div>
+</div>
+
+<div id="graph3DModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-box" style="max-width:800px;">
+        <h3 style="color:var(--accent); margin-top:0;"><i class="material-icons-round" style="vertical-align:middle;">bar_chart</i> Grafico 3D Copertura</h3>
+        <p style="color:var(--text-muted); font-size:13px;">Verifica che il personale pianificato non superi le cabine disponibili (Tetto Rosso).</p>
+        
+        <div id="graph3DArea" class="graph-container">
+            </div>
+        
+        <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:12px; color:var(--text-muted);">
+            <div><span style="display:inline-block; width:12px; height:12px; background:var(--accent); border-radius:3px;"></span> Ottimale</div>
+            <div><span style="display:inline-block; width:12px; height:12px; background:var(--red); border-radius:3px;"></span> OVERBOOKING (Superato limite cabine)</div>
+        </div>
+
+        <button class="btn-action btn-outline w-100" style="margin-top:25px;" onclick="document.getElementById('graph3DModal').style.display='none'">CHIUDI GRAFICO</button>
+    </div>
+</div>
+
+<div class="navbar" id="topNavbar">
+    <h1><i class="material-icons-round">security</i> Centro Comando SPA</h1>
+    <button class="btn-action btn-outline" onclick="window.history.back();"><i class="material-icons-round">arrow_back</i> INDIETRO</button>
+</div>
+
+<div class="main-content">
+    
+    <div class="card" id="globalSelectCard" style="border-left: 6px solid var(--gold); padding:20px;">
+        <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; display:block;">Seleziona la Struttura da gestire</label>
+        <select id="globalStructSelect" class="form-input" style="font-size:16px; font-weight:bold; color:var(--gold); margin:0;" onchange="respApp.loadStructData()">
+            <option value="">-- Caricamento Strutture --</option>
+        </select>
+    </div>
+
+    <div id="workspaceArea" style="display:none;">
+
+        <div class="tabs-header">
+            <button class="tab-btn active" onclick="respApp.openTab('config', this)"><i class="material-icons-round" style="font-size:14px; vertical-align:middle;">tune</i> Configurazione</button>
+            <button class="tab-btn" onclick="respApp.openTab('cabine', this)"><i class="material-icons-round" style="font-size:14px; vertical-align:middle;">spa</i> Gestione Cabine</button>
+            <button class="tab-btn" onclick="respApp.openTab('planning', this)"><i class="material-icons-round" style="font-size:14px; vertical-align:middle;">calendar_month</i> Planning</button>
+        </div>
+
+        <div id="tab-config" class="tab-content active">
+            
+            <div class="card" style="border-color:var(--purple);">
+                <h2 style="color:var(--purple);"><i class="material-icons-round">settings_suggest</i> Configurazione Interfaccia Agenda</h2>
+                <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-body); padding:15px; border-radius:12px; border:1px solid var(--border-line); margin-bottom:20px;">
+                    <div><b style="font-size:14px; color:var(--text-main);">Tetto Massimo Sconti (€)</b><br><span style="font-size:11px; color:var(--text-muted);">Sconto consentito alla reception (senza password manager).</span></div>
+                    <input type="number" id="ui_max_discount" class="form-input" style="width:100px; text-align:center; font-size:16px; font-weight:bold; color:var(--purple); border-color:var(--purple); margin:0;">
+                </div>
+                <div id="agendaUiSwitchesContainer" class="ui-switches-grid"></div>
+                <button class="btn-action w-100" style="background:var(--purple); color:white;" onclick="respApp.saveUISettings()"><i class="material-icons-round">save</i> SALVA IMPOSTAZIONI AGENDA</button>
+            </div>
+
+            <div class="card" style="border-color:var(--gold);">
+                <h2 style="color:var(--gold);"><i class="material-icons-round">admin_panel_settings</i> Regole e Permessi Responsabile (Globali Struttura)</h2>
+                <p style="font-size:12px; color:var(--text-muted); margin-top:0; margin-bottom:20px;">Queste regole verranno ereditate automaticamente da tutti gli account con il ruolo di "Responsabile" in questa sede.</p>
+                
+                <h3>1. Leve Commerciali Manager</h3>
+                <div class="form-grid" style="margin-bottom:25px;">
+                    <div class="form-group"><label>Sconto Massimo Manager (%)</label><input type="number" id="m_lever_perc" class="form-input"></div>
+                    <div class="form-group"><label>Budget Omaggi Mensile (€)</label><input type="number" id="m_lever_budget" class="form-input"></div>
+                </div>
+
+                <h3>2. Permessi Operativi e Deleghe</h3>
+                <div style="background:var(--bg-body); padding:15px; border-radius:12px; border:1px solid var(--border-line); margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <div><b style="color:var(--text-main);">Sblocco / Annulla Cassa</b><br><span style="font-size:11px; color:var(--text-muted);">Riapre una cassa chiusa.</span></div>
+                        <label class="switch"><input type="checkbox" id="m_perm_cassa"><span class="slider"></span></label>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <div><b style="color:var(--text-main);">Modifica Prezzi Ingressi</b><br><span style="font-size:11px; color:var(--text-muted);">Modifica i prezzi base SPA.</span></div>
+                        <label class="switch"><input type="checkbox" id="m_perm_pricing"><span class="slider"></span></label>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <div><b style="color:var(--text-main);">Gestione Planning Turni</b><br><span style="font-size:11px; color:var(--text-muted);">Modifica l'orario dello staff.</span></div>
+                        <label class="switch"><input type="checkbox" id="m_perm_turni"><span class="slider"></span></label>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-top:1px solid var(--border-line); padding-top:15px;">
+                        <div><b style="color:var(--text-main);">Delega ON/OFF Cabine</b><br><span style="font-size:11px; color:var(--text-muted);">Accende o spegne cabine in agenda.</span></div>
+                        <label class="switch"><input type="checkbox" id="m_perm_cabine"><span class="slider"></span></label>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div><b style="color:var(--text-main);">Delega Modifica Orari Cabine</b><br><span style="font-size:11px; color:var(--text-muted);">Varia gli orari delle cabine.</span></div>
+                        <label class="switch"><input type="checkbox" id="m_perm_orari"><span class="slider"></span></label>
+                    </div>
+                </div>
+                <button class="btn-action w-100 btn-gold" onclick="respApp.saveManagerSettings()"><i class="material-icons-round">save</i> SALVA REGOLE MANAGER</button>
+            </div>
+
+            <div class="card" style="border-color:var(--accent);">
+                <h2 style="color:var(--accent);"><i class="material-icons-round">sell</i> Prezzi Accessi Giornalieri</h2>
+                <div class="form-grid">
+                    <div class="form-group"><label>Prezzo SPA Singolo (€)</label><input type="number" id="adm_price_spa" class="form-input" step="0.5" style="font-size:18px; font-weight:bold; color:var(--accent);"></div>
+                    <div class="form-group"><label>Prezzo Piscina Singolo (€)</label><input type="number" id="adm_price_pool" class="form-input" step="0.5" style="font-size:18px; font-weight:bold; color:var(--accent);"></div>
+                </div>
+                <button class="btn-action w-100" onclick="respApp.savePrices()"><i class="material-icons-round">save</i> SALVA PREZZI GLOBALI</button>
+            </div>
+
+        </div>
+
+        <div id="tab-cabine" class="tab-content">
+            <div class="card" style="border-color:var(--green); background:var(--bg-panel);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 style="color:var(--green); margin:0; border:none;"><i class="material-icons-round">spa</i> Gestione Cabine Fisiche</h2>
+                    <button class="btn-action btn-sm btn-outline" style="color:var(--green); border-color:var(--green);" onclick="respApp.addCabina()"><i class="material-icons-round">add</i> NUOVA CABINA</button>
+                </div>
+                
+                <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-body); padding:15px; border-radius:8px; border:1px solid var(--border-line); margin-top:20px;">
+                    <div><b style="font-size:14px; color:var(--text-main);">Limite Cabine Attive (Licenza)</b><br><span style="font-size:11px; color:var(--text-muted);">Max colonne gestibili nell'agenda.</span></div>
+                    <input type="number" id="adm_max_cabine" class="form-input" style="width:80px; text-align:center; font-size:16px; font-weight:bold; color:var(--green); border-color:var(--green); margin:0;">
+                </div>
+                
+                <div id="adminCabineList" class="cabine-grid"></div>
+                
+                <button class="btn-action w-100 btn-green" style="margin-top:25px;" onclick="respApp.saveCabineConfig()"><i class="material-icons-round">save</i> SALVA CABINE E LICENZA</button>
+            </div>
+        </div>
+
+        <div id="tab-planning" class="tab-content">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <h2 style="margin:0; border:none;"><i class="material-icons-round">calendar_month</i> Planning dei Turni</h2>
+                    
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-action btn-sm" style="background:var(--bg-body); color:var(--accent); border:1px solid var(--accent);" onclick="if(window.turniApp) turniApp.open3DGraph()">
+                            <i class="material-icons-round">bar_chart</i> GRAFICO 3D
+                        </button>
+                        <button class="btn-action btn-sm" style="background:var(--purple); color:white;" onclick="if(window.turniApp) turniApp.openExportModal()">
+                            <i class="material-icons-round">print</i> ESPORTA PDF
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="margin-top:20px; margin-bottom:20px;">
+                    <button class="btn-action w-100" style="background:linear-gradient(45deg, #a855f7, #38bdf8); color:white; font-size:15px; height:50px;" onclick="if(window.turniApp) turniApp.runGlobalAutopilot()">
+                        <i class="material-icons-round">auto_awesome</i> AUTOPILOTA GLOBALE IA (INTERO TEAM)
+                    </button>
+                </div>
+
+                <h3 style="margin-top:20px; margin-bottom:10px;">Seleziona Operatore</h3>
+                <div id="opCardsArea" class="op-cards-container"></div>
+                
+                <div id="planningWorkspace" style="display:none; border-top:1px solid var(--border-line); padding-top:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-body); padding:15px; border-radius:12px; border:1px solid var(--border-line); margin-bottom:20px;">
+                        <button class="btn-action btn-outline btn-sm" onclick="if(window.turniApp) turniApp.changeTurniWeek(-1)"><i class="material-icons-round">chevron_left</i> Prec.</button>
+                        <span id="turniWeekLabel" style="font-weight:bold; color:var(--accent); text-transform:uppercase;">Dal -- al --</span>
+                        <button class="btn-action btn-outline btn-sm" onclick="if(window.turniApp) turniApp.changeTurniWeek(1)">Succ. <i class="material-icons-round">chevron_right</i></button>
+                    </div>
+                    
+                    <div id="managerTurniGrid" class="week-grid"></div>
+                    
+                    <button class="btn-action w-100" style="margin-top:25px; height:50px; font-size:16px;" onclick="if(window.turniApp) turniApp.saveTurni()"><i class="material-icons-round">save</i> SALVA PLANNING OPERATORE</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const fbConfig = { apiKey: "AIzaSyCrDuK7SWHdbzrJR-pNpxmRwGnZgV2Dd2Y", authDomain: "touch-welness-massage.firebaseapp.com", databaseURL: "https://touch-welness-massage-default-rtdb.europe-west1.firebasedatabase.app", projectId: "touch-welness-massage", storageBucket: "touch-welness-massage.firebasestorage.app" };
+    if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+
+    const campiAgendaObj = { 
+        "camera": { title: "Camera / Alloggio", desc: "Campo per indicare la camera" }, 
+        "telefono": { title: "Telefono Cliente", desc: "Acquisisci il contatto telefonico" }, 
+        "nascita": { title: "Data di Nascita", desc: "Acquisisci compleanno ospite" }, 
+        "operatore": { title: "Scelta Operatore", desc: "Mostra tendina di selezione staff" }, 
+        "note": { title: "Note Generali", desc: "Box per note libere" }, 
+        "patologie": { title: "Patologie Mediche", desc: "Tasto alert Privacy/Patologie" }, 
+        "eseguito": { title: "Tasto 'Eseguito'", desc: "Spunta per completamento" }, 
+        "privacy": { title: "Contratto e Privacy", desc: "Box per firma Tablet" }, 
+        "whatsapp": { title: "Tasto WhatsApp", desc: "Invio promemoria rapido" } 
+    };
+
+    window.respApp = {
+        db: firebase.database().ref('MASTER_ADMIN_DB'),
+        dataRef: firebase.database().ref('MASTER_ADMIN_DB/structures_data'),
+        structures: {}, users: {}, currentStructId: null,
+        localCabConfig: [], currentUISettings: {},
+
+        init: function() {
+            // ROUTING BLINDATO: Catturo l'ID Struttura anche se LocalStorage fallisce
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.get('mode') === 'tab') {
+                let savedStruct = localStorage.getItem('tw_admin_current_struct');
+                if(!savedStruct && window.parent && window.parent.app && window.parent.app.currentId) {
+                    savedStruct = window.parent.app.currentId;
+                }
+                if(savedStruct) {
+                    this.currentStructId = savedStruct;
+                }
+            }
+
+            this.db.on('value', snap => {
+                const data = snap.val() || {};
+                this.structures = data.structures || {};
+                this.users = data.users || {};
+                if(!urlParams.get('mode')) this.populateStructures();
+                if(this.currentStructId) this.refreshStructData();
+            });
+        },
+
+        showToast: function(m) { const t=document.getElementById("toastBlue"); t.innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); },
+
+        openTab: function(tabId, btnEl) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            if(btnEl) btnEl.classList.add('active');
+            
+            if(tabId === 'planning' && window.turniApp) {
+                turniApp.initFromRespApp();
+            }
+        },
+
+        populateStructures: function() {
+            const sel = document.getElementById('globalStructSelect');
+            if(!sel) return;
+            const cv = sel.value; let html = '<option value="">-- Seleziona Struttura --</option>';
+            Object.values(this.structures).filter(s => !s.archived).forEach(s => { html += `<option value="${s.id}">${s.name}</option>`; });
+            sel.innerHTML = html; if(cv) sel.value = cv;
+        },
+
+        loadStructData: function() {
+            this.currentStructId = document.getElementById('globalStructSelect').value;
+            if(window.turniApp) window.turniApp.currentOpNick = null;
+            this.refreshStructData();
+        },
+
+        refreshStructData: function() {
+            if(!this.currentStructId) return;
+            const sid = this.currentStructId;
+            document.getElementById('workspaceArea').style.display = 'block'; // Forza Visibilità
+            
+            this.dataRef.child(sid).child('settings').once('value').then(snap => {
+                const sett = snap.val() || {};
+                const p = sett.access_prices || {};
+                document.getElementById('adm_price_spa').value = p.spa || 30;
+                document.getElementById('adm_price_pool').value = p.pool || 15;
+
+                document.getElementById('ui_max_discount').value = sett.max_discount_euro || 0;
+                this.currentUISettings = sett.agenda_ui || {};
+                this.renderUISwitches();
+
+                const mRules = sett.manager_rules || {};
+                document.getElementById('m_lever_perc').value = mRules.max_perc || 0;
+                document.getElementById('m_lever_budget').value = mRules.budget || 0;
+                document.getElementById('m_perm_cassa').checked = mRules.auth_annulla_cassa || false;
+                document.getElementById('m_perm_pricing').checked = mRules.auth_pricing || false;
+                document.getElementById('m_perm_turni').checked = mRules.auth_turni || false;
+                document.getElementById('m_perm_cabine').checked = mRules.auth_cabine || false;
+                document.getElementById('m_perm_orari').checked = mRules.auth_orari || false;
+            });
+            
+            this.dataRef.child(sid).once('value').then(snap => {
+                const sData = snap.val() || {}; const lic = sData.license || {}; const sett = sData.settings || {};
+                document.getElementById('adm_max_cabine').value = lic.max_cabine || 5;
+                if(sett.cabine_config && sett.cabine_config.length > 0) { 
+                    this.localCabConfig = Array.isArray(sett.cabine_config) ? sett.cabine_config : Object.values(sett.cabine_config); 
+                } else if (sett.cabine) {
+                    const n = parseInt(sett.cabine) || 2; this.localCabConfig = [];
+                    for(let i=0; i<n; i++) this.localCabConfig.push({attiva:true, nome:`Cabina ${i+1}`, orari:{start:"10:00",end:"20:00"}, giorni:[0,1,2,3,4,5,6]});
+                } else { this.localCabConfig = []; }
+                this.renderCabineList();
+            });
+
+            if(window.turniApp) window.turniApp.renderOpCards();
+        },
+
+        savePrices: function() {
+            if(!this.currentStructId) return;
+            const spa = parseFloat(document.getElementById('adm_price_spa').value) || 0; const pool = parseFloat(document.getElementById('adm_price_pool').value) || 0;
+            this.dataRef.child(`${this.currentStructId}/settings/access_prices`).set({spa: spa, pool: pool}).then(() => this.showToast("Prezzi salvati!"));
+        },
+
+        renderUISwitches: function() {
+            const container = document.getElementById('agendaUiSwitchesContainer'); if(!container) return;
+            container.innerHTML = "";
+            for (const [key, info] of Object.entries(campiAgendaObj)) {
+                const isChecked = this.currentUISettings[key] !== false ? "checked" : "";
+                container.innerHTML += `<div class="switch-row-compact"><div><b style="color:var(--text-main); font-size:13px; display:block;">${info.title}</b><span style="color:var(--text-muted); font-size:10px;">${info.desc}</span></div><label class="switch"><input type="checkbox" id="ui_toggle_${key}" ${isChecked}><span class="slider"></span></label></div>`;
+            }
+        },
+        saveUISettings: function() {
+            if(!this.currentStructId) return;
+            let newUI = {}; 
+            for (const key of Object.keys(campiAgendaObj)) { 
+                const el = document.getElementById(`ui_toggle_${key}`); if(el) newUI[key] = el.checked; 
+            }
+            const maxD = parseFloat(document.getElementById('ui_max_discount').value) || 0;
+            this.dataRef.child(`${this.currentStructId}/settings/agenda_ui`).set(newUI);
+            this.dataRef.child(`${this.currentStructId}/settings/max_discount_euro`).set(maxD).then(() => this.showToast("Impostazioni Agenda Salvate!"));
+        },
+
+        saveManagerSettings: function() {
+            if(!this.currentStructId) return;
+            const rules = {
+                max_perc: parseFloat(document.getElementById('m_lever_perc').value)||0,
+                budget: parseFloat(document.getElementById('m_lever_budget').value)||0,
+                auth_annulla_cassa: document.getElementById('m_perm_cassa').checked, 
+                auth_pricing: document.getElementById('m_perm_pricing').checked, 
+                auth_turni: document.getElementById('m_perm_turni').checked,
+                auth_cabine: document.getElementById('m_perm_cabine').checked,
+                auth_orari: document.getElementById('m_perm_orari').checked
+            };
+            this.dataRef.child(`${this.currentStructId}/settings/manager_rules`).set(rules).then(() => {
+                this.showToast("Regole Manager Salvate e Attive!");
+            });
+        },
+
+        renderCabineList: function() {
+            const cList = document.getElementById('adminCabineList'); if(!cList) return;
+            cList.innerHTML = "";
+            const daysMap = [{v:1, l:'L'}, {v:2, l:'M'}, {v:3, l:'M'}, {v:4, l:'G'}, {v:5, l:'V'}, {v:6, l:'S'}, {v:0, l:'D'}];
+            if(this.localCabConfig.length === 0) { cList.innerHTML = "<div style='color:var(--text-muted); font-size:12px; text-align:center; padding:15px;'>Nessuna cabina configurata.</div>"; return; }
+
+            this.localCabConfig.forEach((cab, idx) => {
+                if(!cab.giorni) cab.giorni = [0,1,2,3,4,5,6]; if(!cab.orari) cab.orari = { start: "10:00", end: "20:00" };
+                let dHtml = daysMap.map(d => `<div class="day-toggle ${cab.giorni.includes(d.v)?'active':''}" onclick="respApp.toggleCabDay(${idx}, ${d.v})">${d.l}</div>`).join('');
+                
+                cList.innerHTML += `
+                    <div class="cabina-sq" style="border-top:4px solid ${cab.attiva?'var(--green)':'var(--red)'}">
+                        <button class="btn-icon btn-del" style="position:absolute; top:10px; right:10px;" onclick="respApp.removeCab(${idx})"><i class="material-icons-round">close</i></button>
+                        <input type="text" id="acab_name_${idx}" value="${cab.nome||('Cabina '+(idx+1))}" style="margin:0 0 10px 0; width:100%; padding:8px; font-weight:bold; text-align:center;" class="form-input" onchange="respApp.updateCab(${idx})">
+                        
+                        <div style="display:flex; justify-content:center; gap:3px; margin-bottom:15px;">${dHtml}</div>
+                        
+                        <div style="display:flex; gap:5px; align-items:center; justify-content:center;">
+                            <input type="time" id="acab_s_${idx}" value="${cab.orari.start}" class="form-input" style="padding:6px; margin:0; width:80px; text-align:center;" onchange="respApp.updateCab(${idx})">
+                            <span style="color:var(--text-muted)">-</span>
+                            <input type="time" id="acab_e_${idx}" value="${cab.orari.end}" class="form-input" style="padding:6px; margin:0; width:80px; text-align:center;" onchange="respApp.updateCab(${idx})">
+                        </div>
+                        
+                        <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:15px;">
+                            <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">Attiva:</span>
+                            <label class="switch" style="margin:0; transform:scale(0.8)"><input type="checkbox" id="acab_attiva_${idx}" ${cab.attiva?'checked':''} onchange="respApp.updateCab(${idx})"><span class="slider"></span></label>
+                        </div>
+                    </div>`;
+            });
+        },
+        toggleCabDay: function(idx, val) { const c = this.localCabConfig[idx]; const pos = c.giorni.indexOf(val); if(pos > -1) c.giorni.splice(pos,1); else { c.giorni.push(val); c.giorni.sort(); } this.renderCabineList(); },
+        updateCab: function(idx) { const c = this.localCabConfig[idx]; c.nome = document.getElementById(`acab_name_${idx}`).value; c.attiva = document.getElementById(`acab_attiva_${idx}`).checked; c.orari.start = document.getElementById(`acab_s_${idx}`).value; c.orari.end = document.getElementById(`acab_e_${idx}`).value; this.renderCabineList(); },
+        addCabina: function() { const max = parseInt(document.getElementById('adm_max_cabine').value) || 5; if(this.localCabConfig.length >= max) return this.showToast(`Limite Licenza (${max}) raggiunto.`); this.localCabConfig.push({ attiva: true, nome: "Nuova Cabina", orari:{start:"10:00", end:"20:00"}, giorni:[0,1,2,3,4,5,6] }); this.renderCabineList(); },
+        removeCab: function(idx) { if(confirm("Eliminare questa cabina?")) { this.localCabConfig.splice(idx,1); this.renderCabineList(); } },
+        saveCabineConfig: function() {
+            if(!this.currentStructId) return;
+            const maxLim = parseInt(document.getElementById('adm_max_cabine').value) || 5;
+            this.dataRef.child(`${this.currentStructId}/license`).update({ max_cabine: maxLim });
+            this.dataRef.child(`${this.currentStructId}/settings/cabine_config`).set(this.localCabConfig).then(() => this.showToast("Cabine e Licenza Salvate!"));
+        }
+    };
+
+    // USO IL DOMContentLoaded che è più sicuro e veloce del window.onload
+    document.addEventListener("DOMContentLoaded", () => {
+        respApp.init();
+    });
+</script>
+
+<script src="Admin_Turni.js"></script>
+
+</body>
+</html>

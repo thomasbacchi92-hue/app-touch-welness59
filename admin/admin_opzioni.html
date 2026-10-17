@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Opzioni Tema - TOUCH WELNESS</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+  :root { --bg-body: #0f172a; --bg-panel: #1e293b; --border-line: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #38bdf8; --gold: #fbbf24; --green: #10b981; --red: #ef4444; --purple: #a855f7; }
+  :root.light-theme { --bg-body: #f8fafc; --bg-panel: #ffffff; --border-line: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+  body { font-family: -apple-system, sans-serif; background: var(--bg-body); margin: 0; color: var(--text-main); transition: 0.3s; padding: 30px; }
+  
+  .card { background: var(--bg-panel); border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 25px; border: 1px solid var(--border-line); }
+  h2 { margin-top: 0; color: var(--gold); display:flex; justify-content:space-between; align-items:center; font-size: 20px; border-bottom: 2px solid var(--border-line); padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; }
+  
+  .theme-card { border: 2px solid var(--border-line); border-radius: 12px; padding: 20px; cursor: pointer; transition: 0.2s; background: var(--bg-body); text-align:center; }
+  .theme-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); }
+  .theme-card i { font-size: 40px; margin-bottom: 15px; display: block; }
+  
+  #toastBlue { visibility: hidden; min-width: 250px; background: var(--accent); color: #0f172a; text-align: center; border-radius: 10px; padding: 16px; position: fixed; right: 30px; bottom: 30px; z-index: 9999; opacity: 0; transition: 0.3s; font-weight: bold; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+  #toastBlue.show { visibility: visible; opacity: 1; bottom: 40px; }
+</style>
+<script>
+    if(localStorage.getItem('tw_admin_theme') === 'light' || localStorage.getItem('tw_theme') === 'light') { document.documentElement.classList.add('light-theme'); }
+</script>
+</head>
+<body>
+
+<div id="toastBlue">Notifica</div>
+
+<div class="card">
+    <h2><i class="material-icons-round" style="vertical-align:middle; color:var(--accent)">palette</i> Opzioni Tema (Master)</h2>
+    <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Scegli il tema visivo per tutto il pannello di controllo direzionale.</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        <div class="theme-card" id="admin-theme-dark" onclick="optApp.setTheme('dark')">
+            <i class="material-icons-round">dark_mode</i>
+            <div style="font-weight:bold; font-size:16px;">Notte (Premium)</div>
+        </div>
+        <div class="theme-card" id="admin-theme-light" onclick="optApp.setTheme('light')">
+            <i class="material-icons-round" style="color:#f59e0b">light_mode</i>
+            <div style="font-weight:bold; font-size:16px;">Giorno (Chiaro)</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const fbConfig = { apiKey: "AIzaSyCrDuK7SWHdbzrJR-pNpxmRwGnZgV2Dd2Y", authDomain: "touch-welness-massage.firebaseapp.com", databaseURL: "https://touch-welness-massage-default-rtdb.europe-west1.firebasedatabase.app", projectId: "touch-welness-massage", storageBucket: "touch-welness-massage.firebasestorage.app" };
+    if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+
+    window.optApp = {
+        showToast: function(m) { const t=document.getElementById("toastBlue"); t.innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); },
+        
+        setTheme: function(theme) { 
+            localStorage.setItem('tw_admin_theme', theme); 
+            if(theme === 'light') {
+                document.documentElement.classList.add('light-theme');
+                if(window.parent && window.parent.document) window.parent.document.documentElement.classList.add('light-theme');
+            } else {
+                document.documentElement.classList.remove('light-theme');
+                if(window.parent && window.parent.document) window.parent.document.documentElement.classList.remove('light-theme');
+            }
+            this.updateUI(); 
+            this.showToast("Tema aggiornato con successo!");
+        },
+
+        updateUI: function() {
+            const isLight = localStorage.getItem('tw_admin_theme') === 'light'; 
+            const cDark = document.getElementById('admin-theme-dark'); 
+            const cLight = document.getElementById('admin-theme-light');
+            if(cDark && cLight) {
+                cDark.style.borderColor = isLight ? "var(--border-line)" : "var(--accent)"; 
+                cDark.style.boxShadow = isLight ? "none" : "0 0 0 3px rgba(56, 189, 248, 0.3)";
+                cLight.style.borderColor = isLight ? "var(--accent)" : "var(--border-line)"; 
+                cLight.style.boxShadow = isLight ? "0 0 0 3px rgba(56, 189, 248, 0.3)" : "none";
+            }
+        }
+    };
+
+    window.optApp.updateUI();
+</script>
+</body>
+</html>

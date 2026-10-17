@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="it" translate="no">
+<head>
+<meta name="google" content="notranslate">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Agenda Operatori - TOUCH WELNESS</title>
+
+<script>
+    (function() {
+        var isLogged = localStorage.getItem('tw_structure_id') || localStorage.getItem('tw_user');
+        if (!isLogged) window.location.replace('../login.html');
+    })();
+</script>
+
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<script src="../DeviceSync.js"></script>
+<script src="../Master_core/Desktop_AuthSync.js"></script>
+<script src="../Master_core/Data_Core.js"></script>
+<script src="../Master_core/Component_Modals.js"></script>
+<script src="../Master_core/UI_Form.js"></script>
+
+<script src="Logic_Operatori.js"></script>
+
+<style>
+  :root { 
+      --bg-body: #0f172a; --bg-panel: #1e293b; --border-line: #334155; 
+      --text-main: #f8fafc; --text-muted: #94a3b8; 
+      --accent: #38bdf8; --gold: #fbbf24; --green: #10b981; --red: #ef4444; --purple: #a855f7;
+      --row-height: 60px; 
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, sans-serif; background: var(--bg-body); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; color: var(--text-main); }
+  .grid-container, .colonna, .col-head, .time-lbl, .slot, .app-base { user-select: none !important; -webkit-user-select: none !important; }
+
+  .layout { display: flex; flex: 1; overflow: hidden; width: 100%; position: relative; }
+  .grid-container { flex: 1; display: flex; gap: 0; padding: 0; overflow-x: auto; overflow-y: auto; background: var(--bg-body); position: relative; scroll-behavior: smooth; }
+  .colonna { flex: 1; min-width: 280px; background: var(--bg-panel); border-right: 1px solid var(--border-line); height: max-content; min-height: 100%; }
+  
+  .col-head { background: var(--bg-panel); color: var(--text-main); padding: 12px; text-align: center; border-bottom: 4px solid var(--purple); position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  .col-head .op-name { font-weight: 900; font-size: 14px; text-transform: uppercase; color: var(--purple); }
+  .metrics-box { display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; margin-top: 8px; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
+
+  .time-row { display: flex; height: var(--row-height); border-bottom: 1px solid var(--border-line); }
+  .time-lbl { width: 55px; background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: var(--text-muted); border-right: 1px solid var(--border-line); flex-shrink: 0; }
+  .slot { flex: 1; position: relative; box-sizing: border-box; }
+  
+  .app-base { position: absolute; font-size: 11px; overflow: hidden; border-radius: 6px; padding: 6px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); z-index: 5; cursor: grab; transition: transform 0.1s; }
+  .app-base:active { cursor: grabbing; }
+  .app-normal { background: #6b21a8; color: #ffffff; border-left: 5px solid #d8b4fe; width: calc(100% - 4px); left: 2px; }
+  .app-overlap { background: #b91c1c; color: #ffffff; border-left: 5px solid #fca5a5; width: calc(100% - 20px); left: 16px; margin-top: 10px; z-index: 10; box-shadow: -4px 4px 15px rgba(0,0,0,0.6); border-top: 1px solid rgba(255,255,255,0.2); }
+
+  /* Stili Modale Admin */
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 4000; align-items: center; justify-content: center; backdrop-filter: blur(5px); padding: 15px; }
+  .modal-box { background: var(--bg-panel); padding: 30px; border-radius: 16px; width: 100%; max-width: 450px; border: 1px solid var(--border-line); box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+  .form-input { width: 100%; padding: 15px; border: 1px solid var(--border-line); border-radius: 8px; font-size: 14px; outline:none; background: var(--bg-body); color: var(--text-main); box-sizing: border-box; font-weight:bold; }
+  
+  /* Stile Custom Checkbox con X */
+  .custom-checkbox { width: 24px; height: 24px; border: 2px solid var(--border-line); border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: transparent; font-weight: 900; background: var(--bg-body); font-family: sans-serif; transition: 0.2s; user-select: none;}
+  .custom-checkbox.checked { color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="toastBlue" style="display:none; position:fixed; z-index:9999; right:30px; bottom:30px; background:#2563eb; color:#fff; padding:12px 24px; border-radius:8px; font-weight:bold; box-shadow:0 4px 15px rgba(0,0,0,0.4); align-items:center; gap:8px;">
+    <i class="material-icons-round" style="font-size:20px;">info</i><span id="toastMsg">Notifica</span>
+</div>
+
+<!-- INIEZIONE NAVBAR UNIVERSALE -->
+<div id="tw-universal-navbar"></div>
+<script src="../Master_core/Component_Navbar.js"></script>
+
+<div class="layout">
+    <div class="grid-container" id="mainGrid"></div>
+</div>
+
+<!-- MODALE SBLOCCO ADMIN -->
+<div id="adminAuthModal" class="modal-overlay" onclick="if(event.target===this) document.getElementById('adminAuthModal').style.display='none'">
+    <div class="modal-box">
+        <h2 style="color:var(--purple); margin-top:0; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border-line); padding-bottom:15px;">
+            <i class="material-icons-round">badge</i> Modalità Responsabile
+        </h2>
+        
+        <div style="margin-bottom:15px;">
+            <label style="font-size:11px; color:var(--text-muted); font-weight:bold; text-transform:uppercase;">Scegli il responsabile</label>
+            <select id="adminSelect" class="form-input" style="color:var(--purple); border-color:rgba(168, 85, 247, 0.3);">
+                <option value="">Caricamento...</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <label style="font-size:11px; color:var(--text-muted); font-weight:bold; text-transform:uppercase;">Password Area Riservata</label>
+            <input type="password" id="adminPwd" class="form-input" placeholder="Inserisci Password" style="letter-spacing:3px; text-align:center;">
+        </div>
+
+        <div style="display:flex; align-items:center; gap:12px; background:rgba(56, 189, 248, 0.05); border:1px solid rgba(56, 189, 248, 0.2); padding:15px; border-radius:8px; margin-bottom:25px;" onclick="toggleAdminCheck()">
+            <div id="adminCheckBtn" class="custom-checkbox">X</div>
+            <div>
+                <div style="font-weight:bold; color:var(--text-main); font-size:14px;">Disattiva trasparenza</div>
+                <div style="font-size:11px; color:var(--text-muted);">Rivela prezzi e minutaggio dei trattamenti</div>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+            <button type="button" style="background:var(--purple); color:#fff; border:none; padding:12px 25px; border-radius:8px; font-weight:900; cursor:pointer; text-transform:uppercase; display:flex; align-items:center; gap:8px;" onclick="verifyAdminAuth()">
+                Conferma <i class="material-icons-round">check_circle</i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const dEl = document.getElementById("mainDate");
+        if (dEl && !dEl.value) { dEl.value = new Date().toISOString().split('T')[0]; }
+        
+        setTimeout(() => { 
+            if(typeof window.sysUpdateFakeDate === 'function') window.sysUpdateFakeDate();
+            if(typeof renderOperatori === 'function') renderOperatori(); 
+        }, 800);
+    });
+
+    window.sysChangeDate = function(offset) {
+        const dEl = document.getElementById("mainDate");
+        if(!dEl) return;
+        const current = dEl.value ? new Date(dEl.value) : new Date();
+        current.setDate(current.getDate() + offset);
+        dEl.value = current.toISOString().split('T')[0];
+        if(typeof window.sysUpdateFakeDate === 'function') window.sysUpdateFakeDate();
+        if(typeof renderOperatori === 'function') renderOperatori();
+    };
+
+    window.sysUpdateFakeDate = function() {
+        const dEl = document.getElementById("mainDate");
+        const fEl = document.getElementById("fakeDateText");
+        if(dEl && fEl && dEl.value) {
+            const parts = dEl.value.split('-');
+            if(parts.length === 3) fEl.innerText = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+    };
+
+    // --- LOGICA MODALE ADMIN ---
+    
+    window.sysOpenAdminModal = function() {
+        if(window.isAdminMode) {
+            // Se è già attivo, un clic disattiva la modalità tornando alla censura
+            window.isAdminMode = false;
+            if(typeof renderOperatori === 'function') renderOperatori();
+            if(window.showToast) window.showToast("Trasparenza Riattivata (Dati Nascosti)");
+            return;
+        }
+
+        // Popola la tendina con i responsabili
+        const sel = document.getElementById('adminSelect');
+        sel.innerHTML = '<option value="">-- Seleziona --</option>';
+        if(window.allUsersData) {
+            Object.keys(window.allUsersData).forEach(uid => {
+                const u = window.allUsersData[uid];
+                const isGhost = (u.attivo === false || u.attiva === false || u.eliminato === true);
+                if(String(u.structureId) === String(window.twStructId) && !isGhost && (u.isManager === true || u.role === 'admin')) {
+                    sel.innerHTML += `<option value="${uid}">${u.name} ${u.surname||''} (${u.nick})</option>`;
+                }
+            });
+        }
+        document.getElementById('adminPwd').value = "";
+        document.getElementById('adminCheckBtn').classList.remove('checked');
+        document.getElementById('adminAuthModal').style.display = 'flex';
+    };
+
+    window.toggleAdminCheck = function() {
+        const btn = document.getElementById('adminCheckBtn');
+        btn.classList.toggle('checked');
+    };
+
+    window.verifyAdminAuth = function() {
+        const uid = document.getElementById('adminSelect').value;
+        const pwd = document.getElementById('adminPwd').value;
+        const isChecked = document.getElementById('adminCheckBtn').classList.contains('checked');
+
+        if(!uid || !pwd) {
+            alert("Seleziona un responsabile e inserisci la password.");
+            return;
+        }
+        if(!isChecked) {
+            alert("Devi spuntare l'opzione 'Disattiva trasparenza' per procedere.");
+            return;
+        }
+
+        const u = window.allUsersData[uid];
+        if(u && (u.pass === pwd || u.password === pwd)) {
+            // Sblocco consentito
+            window.isAdminMode = true;
+            document.getElementById('adminAuthModal').style.display = 'none';
+            if(window.showToast) window.showToast("Trasparenza Disattivata: Modalità Admin Attiva");
+            if(typeof renderOperatori === 'function') renderOperatori();
+        } else {
+            alert("Password errata o accesso negato.");
+        }
+    };
+    
+    // Funzione Toast Integrata
+    window.showToast = function(msg) {
+        const x = document.getElementById("toastBlue");
+        if(x) {
+            document.getElementById("toastMsg").innerText = msg;
+            x.style.display = "flex"; 
+            setTimeout(() => { x.style.display="none"; }, 3000);
+        }
+    };
+</script>
+</body>
+</html>

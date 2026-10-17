@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="it" translate="no">
+<head>
+<meta name="google" content="notranslate">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lista Appuntamenti SPA - TOUCH WELNESS</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<!-- PERCORSI AGGIORNATI -->
+<script src="../Master_core/Desktop_AuthSync.js"></script>
+<script src="../Master_core/Desktop_AgendaLogic.js"></script>
+<script src="../Master_core/Desktop_Form_CRM.js"></script>
+<script src="../Master_core/Desktop_Radar.js"></script>
+<script src="../Master_core/Desktop_OfflineSync.js"></script>   
+
+<style>
+  :root { 
+      --bg-body: #0f172a; --bg-panel: #1e293b; --border-line: #334155; 
+      --text-main: #f8fafc; --text-muted: #94a3b8; 
+      --accent: #38bdf8; --gold: #fbbf24; --green: #10b981; --red: #ef4444; --purple: #a855f7;
+  }
+
+  body { font-family: -apple-system, sans-serif; background: var(--bg-body); margin: 0; display: flex; flex-direction: column; height: 100vh; color: var(--text-main); }
+  * { box-sizing: border-box; }
+
+  /* STILE NAVBAR NATIVA (Zero Lampeggi) */
+  .tw-navbar {
+      display: flex; justify-content: space-between; align-items: center;
+      background: linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.95) 100%);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 10px 15px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.6); z-index: 1000; flex-shrink: 0;
+      box-sizing: border-box; gap: 15px; overflow: hidden;
+  }
+  .nav-wing { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .left-wing { justify-content: flex-start; }
+  .right-wing { justify-content: flex-end; }
+  
+  .nav-btn {
+      flex: 1 1 0; min-width: 0;
+      background: rgba(15, 23, 42, 0.4); color: var(--text-main); border: 1px solid rgba(255,255,255,0.05);
+      padding: 10px 8px; border-radius: 8px; font-weight: 700; font-size: 11px;
+      display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+      transition: all 0.2s ease-out; text-transform: uppercase;
+  }
+  .nav-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  .nav-btn i { font-size: 16px; color: var(--text-muted); transition: 0.2s; flex-shrink: 0; }
+  
+  .btn-main { border-color: rgba(56, 189, 248, 0.2); }
+  .btn-main i { color: var(--text-main); }
+  
+  .nav-btn:hover {
+      background: rgba(30, 41, 59, 0.8); border-color: rgba(56, 189, 248, 0.6);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.4), inset 0 0 10px rgba(168, 85, 247, 0.3);
+      color: #fff; transform: translateY(-2px);
+  }
+  .nav-btn:hover i { color: var(--accent); text-shadow: 0 0 10px var(--accent); }
+  
+  .nav-center { display: flex; align-items: center; gap: 5px; flex: 0 1 auto; justify-content: center; min-width: max-content; }
+  .date-selector-pro {
+      display: flex; align-items: center; gap: 8px; background: transparent;
+      border: 1px solid transparent; padding: 8px 18px; border-radius: 20px; cursor: default;
+  }
+  .date-selector-pro span { font-size: 15px; font-weight: 900; color: var(--text-main); white-space: nowrap; }
+  .date-selector-pro i { font-size: 18px; color: var(--accent); }
+
+  #netStatusDot { width: 14px; height: 14px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px rgba(0,0,0,0.5); cursor: pointer; position: relative; transition: 0.3s; margin-right: 4px; border: 2px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+  #netStatusBadge { position: absolute; top: -6px; right: -6px; background: var(--red); color: white; font-size: 9px; font-weight: bold; width: 16px; height: 16px; border-radius: 50%; text-align: center; line-height: 16px; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+
+  @media (max-width: 1300px) {
+      .tw-navbar { gap: 10px; padding: 8px 10px; }
+      .nav-wing { gap: 4px; }
+      .nav-btn { padding: 8px 4px; font-size: 10px; gap: 4px; }
+      .nav-btn i { font-size: 14px; }
+      .date-selector-pro { padding: 6px 12px; }
+      .date-selector-pro span { font-size: 13px; }
+  }
+  @media (max-width: 1050px) {
+      .nav-btn { flex-direction: column; padding: 6px 2px; gap: 2px; }
+      .nav-btn span { font-size: 8px; }
+      .nav-btn i { font-size: 16px; }
+  }
+
+  /* =========================================
+     ZONA FILTRI (TOP BAR) - PROPORZIONATA
+     ========================================= */
+  .top-bar { 
+      background: var(--bg-panel); 
+      padding: 10px 15px; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 10px; 
+      border-bottom: 2px solid var(--border-line); 
+      flex-shrink: 0; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+  }
+  
+  .filter-row { 
+      display: flex; 
+      gap: 8px; 
+      width: 100%; 
+      max-width: 100%;
+      align-items: flex-end; 
+      flex-wrap: nowrap; 
+      overflow-x: auto; 
+      padding-bottom: 2px; 
+  }
+  
+  .filter-row::-webkit-scrollbar { height: 4px; }
+  .filter-row::-webkit-scrollbar-thumb { background: var(--border-line); border-radius: 4px; }
+  
+  /* Cerca prende più spazio (flex: 2) */
+  .search-box { 
+      display: flex; align-items: center; background: var(--bg-body); padding: 0 10px; 
+      border-radius: 6px; flex: 2; min-width: 150px; border: 1px solid var(--border-line); 
+      transition: border-color 0.3s; height: 34px; box-sizing: border-box; 
+  }
+  .search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3); }
+  .search-box input { border: none; background: transparent; color: var(--text-main); font-size: 12px; outline: none; width: 100%; margin-left: 5px; text-overflow:ellipsis;}
+  
+  /* I select si dividono lo spazio rimanente (flex: 1) */
+  .filter-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 80px; }
+  .filter-group label { font-size: 9px; color: var(--text-muted); font-weight: bold; text-transform: uppercase; white-space: nowrap; margin: 0; }
+  
+  .filter-select, .filter-input { 
+      width: 100%; /* Forza il riempimento dello spazio assegnato da flex */
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      background-color: var(--bg-body); 
+      color: var(--text-main); 
+      border: 1px solid var(--border-line); 
+      padding: 0 20px 0 8px; 
+      border-radius: 6px; 
+      outline: none; 
+      font-size: 11px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      color-scheme: dark;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 5px center;
+      background-size: 14px;
+      transition: all 0.2s;
+      height: 34px; 
+      box-sizing: border-box;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+  }
+  .filter-select:focus, .filter-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
+  .filter-select option { background-color: var(--bg-panel); color: var(--text-main); font-weight: bold; padding: 10px; }
+  .filter-input { background-image: none; padding: 0 10px; cursor: text; font-weight: normal; }
+
+  /* FILTRI AVANZATI */
+  .advanced-filters { display: none; width: 100%; gap: 10px; flex-wrap: nowrap; overflow-x: auto; padding-top: 10px; border-top: 1px dashed var(--border-line); animation: fadeIn 0.3s ease; }
+  .advanced-filters.open { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+  .btn-adv-filters { background: rgba(56, 189, 248, 0.1); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.3); padding: 0 10px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 10px; transition: 0.2s; height: 34px; box-sizing: border-box; white-space: nowrap; flex-shrink: 0; }
+  .btn-adv-filters:hover { background: var(--accent); color: #0f172a; }
+
+  .btn-excel { background: #10b981; color: white; border: none; padding: 0 10px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: 0.3s; height: 34px; box-sizing: border-box; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+  .btn-excel:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(16,185,129,0.4); }
+
+  /* CONTENUTO PRINCIPALE E TABELLA */
+  .main-content { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+  .list-container { width: 100%; max-width: 1600px; display: flex; flex-direction: column; gap: 15px; }
+
+  .table-responsive { width: 100%; overflow-x: auto; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border-line); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .compact-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+  .compact-table th { padding: 12px 15px; border-bottom: 2px solid var(--border-line); color: var(--text-muted); background: var(--bg-body); white-space: nowrap; font-size: 11px; font-weight: 900; text-transform: uppercase; position: sticky; top: 0; z-index: 2;}
+  .compact-table td { padding: 12px 15px; border-bottom: 1px solid var(--border-line); color: var(--text-main); vertical-align: middle; transition: background-color 0.2s; }
+  
+  .compact-table tr:hover td { background-color: rgba(255,255,255,0.03); }
+  .compact-table tr.row-eseguito td { background-color: rgba(251, 191, 36, 0.15) !important; }
+  .compact-table tr.row-eseguito td:first-child { border-left: 4px solid var(--gold); }
+  .compact-table tr.row-pagato td { background-color: rgba(16, 185, 129, 0.15) !important; }
+  .compact-table tr.row-pagato td:first-child { border-left: 4px solid var(--green); }
+  
+  .compact-table tr.row-couple td:first-child { border-left: 4px solid var(--purple); }
+
+  .link-blue { color: #38bdf8; text-decoration: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+  .link-blue:hover { text-decoration: underline; color: #7dd3fc; }
+  .client-name { font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
+  .client-name:hover { color: var(--accent); }
+
+  .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-line); transition: .3s; border-radius: 20px; }
+  .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow:0 2px 4px rgba(0,0,0,0.2);}
+  input:checked + .slider { background-color: var(--green); }
+  input:checked + .slider:before { transform: translateX(14px); }
+  input.eseg-switch:checked + .slider { background-color: var(--gold); }
+
+  /* MODALI (EDIT) */
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 15px; }
+  .modal-box { background: var(--bg-panel); padding: 25px; border-radius: 16px; width: 100%; max-width: 450px; border: 1px solid var(--border-line); box-shadow: 0 10px 30px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto; }
+
+  .form-group-modal { margin-bottom: 15px; width: 100%; position: relative; }
+  .form-group-modal label { display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+  
+  .btn-save { width: 100%; padding: 14px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; margin-top: 10px; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; font-size:14px; }
+  .btn-save i { font-size: 18px; }
+  .btn-save:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  .btn-wa { background: rgba(16, 185, 129, 0.1) !important; color: var(--green) !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; }
+  .btn-del { background: rgba(239, 68, 68, 0.1) !important; color: var(--red) !important; border: 1px solid rgba(239, 68, 68, 0.3) !important; }
+  .btn-outline { background: transparent !important; color: var(--text-muted) !important; border: 1px solid var(--border-line) !important; }
+
+  #toastBlue { visibility: hidden; min-width: 250px; background-color: var(--toast-blue, #2563eb); color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; right: 30px; bottom: 30px; z-index: 9999; font-size: 14px; font-weight: bold; opacity: 0; transition: 0.5s; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+  #toastBlue.show { visibility: visible; opacity: 1; bottom: 40px; }
+</style>
+<script>
+    if(localStorage.getItem('tw_theme') === 'light') document.documentElement.classList.add('light-theme');
+</script>
+</head>
+<body>
+
+<div id="toastBlue"><i class="material-icons-round" style="vertical-align:middle; font-size:16px;">info</i> <span id="toastMsg">Notifica</span></div>
+
+<!-- INIEZIONE NAVBAR UNIVERSALE -->
+<div id="tw-universal-navbar"></div>
+<script src="../Master_core/Component_Navbar.js?v=8"></script>
+
+<script>
+    window.openAreaRiservataIframe = function(e) {
+        if(e) e.stopPropagation();
+        if(document.getElementById("tw-modal")) { document.getElementById("tw-modal").style.display="flex"; return; }
+        const htmlStr = '<div id="tw-modal" style="display:flex;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:10000;align-items:center;justify-content:center;backdrop-filter:blur(5px);" onclick="if(event.target===this) this.style.display=\'none\'"><div style="width:95%;max-width:900px;height:90vh;background:#0f172a;border-radius:16px;overflow:hidden;position:relative;box-shadow:0 10px 40px rgba(0,0,0,0.8);border:1px solid #334155;"><button onclick="document.getElementById(\'tw-modal\').style.display=\'none\'" style="position:absolute;top:15px;right:15px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid #ef4444;border-radius:50%;width:35px;height:35px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10001;transition:0.2s;"><i class="material-icons-round">close</i></button><iframe src="../Area_Riservata.html" style="width:100%;height:100%;border:none;border-radius:16px;"></iframe></div></div>';
+        document.body.insertAdjacentHTML("beforeend", htmlStr);
+    };
+</script>
+
+<div class="top-bar">
+    <!-- ================= RIGA UNICA COMPRESSA E PROPORZIONATA ================= -->
+    <div class="filter-row">
+        
+        <div class="search-box">
+            <i class="material-icons-round" style="color:var(--text-muted); font-size:16px;">search</i>
+            <input type="text" id="searchInput" placeholder="Cerca..." autocomplete="off">
+        </div>
+        
+        <div class="filter-group">
+            <label>Anno</label>
+            <select class="filter-select" id="fAnno" onchange="clearAdvancedDates(); renderList()">
+                <option value="all">Tutti</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Mese</label>
+            <select class="filter-select" id="fMese" onchange="clearAdvancedDates(); renderList()">
+                <option value="all">Tutti</option>
+                <option value="01">Gen</option>
+                <option value="02">Feb</option>
+                <option value="03">Mar</option>
+                <option value="04">Apr</option>
+                <option value="05">Mag</option>
+                <option value="06">Giu</option>
+                <option value="07">Lug</option>
+                <option value="08">Ago</option>
+                <option value="09">Set</option>
+                <option value="10">Ott</option>
+                <option value="11">Nov</option>
+                <option value="12">Dic</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Operatore</label>
+            <select class="filter-select" id="fOperatore" onchange="renderList()">
+                <option value="all">Tutti</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Tipologia</label>
+            <select class="filter-select" id="fTipo" onchange="handleTypeChange()">
+                <option value="all">Tutte</option>
+                <option value="spa">SPA</option>
+                <option value="massaggi">Massaggi</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Stato</label>
+            <select class="filter-select" id="fStato" onchange="renderList()">
+                <option value="all">Tutti</option>
+                <option value="eseguito">Eseguiti</option>
+                <option value="pagato">Pagati</option>
+                <option value="dapagare">Da Pagare</option>
+            </select>
+        </div>
+
+        <button class="btn-adv-filters" id="btnToggleAdv" onclick="toggleAdvancedFilters()">
+            <i class="material-icons-round" style="font-size:16px;">tune</i> FILTRI
+        </button>
+        
+        <button class="btn-excel" onclick="exportDataToExcel()" title="Esporta in Excel">
+            <i class="material-icons-round" style="font-size:16px;">table_chart</i> EX
+        </button>
+
+    </div>
+
+    <!-- FILTRI AVANZATI (A SCOMPARSA) -->
+    <div class="advanced-filters" id="advFiltersBox">
+        <div class="filter-group">
+            <label>Dal Giorno</label>
+            <input type="date" class="filter-select" id="fDataDal" onchange="clearBasicDates(); renderList()">
+        </div>
+        <div class="filter-group">
+            <label>Al Giorno</label>
+            <input type="date" class="filter-select" id="fDataAl" onchange="clearBasicDates(); renderList()">
+        </div>
+        
+        <div class="filter-group" id="dettaglioMassaggioContainer" style="display:none;">
+            <label style="color:var(--accent)">Tipo Massaggio</label>
+            <input type="text" class="filter-input" id="fDettaglioMassaggio" placeholder="Es: Decontratturante" onkeyup="renderList()">
+        </div>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="list-container" id="listView">
+        <div style="text-align:center; padding:50px; color:var(--text-muted); font-weight:bold; font-size:16px;">Sincronizzazione globale in corso...</div>
+    </div>
+</div>
+
+<!-- MODALE EDIT DI LISTA -->
+<div id="editModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 style="margin-top:0; color:var(--gold); border-bottom:1px solid var(--border-line); padding-bottom:10px; text-transform:uppercase;">Modifica Appuntamento</h3>
+        <input type="hidden" id="eId"><input type="hidden" id="eOldDate"><input type="hidden" id="eCab">
+        <div style="display:flex; gap:10px"><div class="form-group-modal" style="flex:1"><label>Data</label><input type="date" id="eDate" class="filter-input" style="width:100%; padding-left:10px; padding-right:10px; background-image:none;"></div><div class="form-group-modal" style="flex:1"><label>Orario</label><input type="time" id="eOra" class="filter-input" style="width:100%; padding-left:10px; padding-right:10px; background-image:none;"></div></div>
+        
+        <div style="display:flex; gap:10px">
+            <div class="form-group-modal" style="flex:1"><label>Nr. Fattura</label><input type="text" id="eFattura" class="filter-input" style="width:100%"></div>
+            <div class="form-group-modal" style="flex:1"><label>Cod. Cliente</label><input type="text" id="eCodCliente" class="filter-input" style="width:100%"></div>
+        </div>
+
+        <div style="display:flex; gap:10px"><div class="form-group-modal" style="flex:1"><label>Camera</label><input type="number" id="eCam" class="filter-input" style="width:100%"></div><div class="form-group-modal" style="flex:1.5"><label>Telefono</label><input type="tel" id="eTel" class="filter-input" style="width:100%"></div></div>
+        <div class="form-group-modal"><label>Ospite</label><input type="text" id="eCog" class="filter-input" style="width:100%"></div>
+        
+        <div class="form-group-modal"><label>Operatore</label><select id="eOp" class="filter-input" style="width:100%"></select></div>
+        
+        <div style="background:var(--bg-body); padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border-line);"><div style="font-size:11px; color:var(--text-muted); font-weight:bold; margin-bottom:5px;">SERVIZIO PRENOTATO</div><div id="eServName" style="font-weight:bold; font-size:15px; color:var(--accent);"></div></div>
+        <div class="form-group-modal"><label>Note Interne</label><textarea id="eNote" class="filter-input" style="width:100%; height:auto;" rows="2"></textarea></div>
+        
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+            <button class="btn-save" onclick="saveEdit()"><i class="material-icons-round">save</i> SALVA MODIFICHE</button>
+            <button class="btn-save btn-wa" onclick="shareWA()"><i class="material-icons-round">whatsapp</i> INVIA WHATSAPP</button>
+            <button class="btn-save btn-del" onclick="promptDelete(document.getElementById('eId').value, document.getElementById('eOldDate').value)"><i class="material-icons-round">delete</i> ELIMINA PRENOTAZIONE</button>
+            <button class="btn-save btn-outline" onclick="document.getElementById('editModal').style.display='none'">ANNULLA</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let allApps = [];
+    const localStructId = localStorage.getItem("tw_structure_id");
+    if(!localStructId) window.location.href="../login.html";
+
+    function initFilters() {
+        const today = new Date();
+        document.getElementById("fAnno").value = today.getFullYear().toString();
+        document.getElementById("fMese").value = String(today.getMonth() + 1).padStart(2, '0');
+        document.getElementById("fDataDal").value = "";
+        document.getElementById("fDataAl").value = "";
+    }
+    initFilters();
+
+    function toggleAdvancedFilters() {
+        const box = document.getElementById('advFiltersBox');
+        const btn = document.getElementById('btnToggleAdv');
+        if (box.classList.contains('open')) {
+            box.classList.remove('open');
+            btn.innerHTML = '<i class="material-icons-round" style="font-size:16px;">tune</i> FILTRI';
+        } else {
+            box.classList.add('open');
+            btn.innerHTML = '<i class="material-icons-round" style="font-size:16px;">expand_less</i> NASCONDI';
+        }
+    }
+
+    function clearAdvancedDates() {
+        document.getElementById('fDataDal').value = '';
+        document.getElementById('fDataAl').value = '';
+    }
+    function clearBasicDates() {
+        document.getElementById('fAnno').value = 'all';
+        document.getElementById('fMese').value = 'all';
+    }
+
+    function handleTypeChange() {
+        const tipo = document.getElementById("fTipo").value;
+        const dettContainer = document.getElementById("dettaglioMassaggioContainer");
+        const dettInput = document.getElementById("fDettaglioMassaggio");
+        
+        if(tipo === 'massaggi') {
+            dettContainer.style.display = 'flex';
+        } else {
+            dettContainer.style.display = 'none';
+            dettInput.value = '';
+        }
+        renderList();
+    }
+
+    let searchTimeout = null;
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        const val = e.target.value.trim();
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if(val.length >= 5 || val.length === 0) {
+                renderList();
+            }
+        }, 300);
+    });
+
+    window.render = function() {
+        parseAllApps();
+    };
+
+    function parseAllApps() {
+        allApps = [];
+        if (window.db && window.db.app) {
+            Object.keys(window.db.app).forEach(dateStr => {
+                const dayData = window.db.app[dateStr];
+                if (!dayData) return;
+                const dayArray = Array.isArray(dayData) ? dayData : Object.values(dayData);
+                dayArray.forEach(app => {
+                    if(app && app.id) { 
+                        allApps.push({
+                            id: app.id, fullDate: dateStr, ora: app.ora || "00:00", cam: app.cam || "", cog: app.cog || "N.D.",
+                            serv: app.serv || "Generico", op: app.op || "-", price: app.price || 0, dur: app.dur || 30,
+                            eseguito: app.eseguito === true, pagato: app.pagato === true, tel: app.tel || "", note: app.note || "",
+                            cab: app.cab || "1", fattura: app.fattura || "", codCliente: app.codCliente || "", driveLink: app.driveLink || null,
+                            isCouple: app.isCouple === true, linkedId: app.linkedId || null
+                        }); 
+                    }
+                });
+            });
+        }
+        allApps.sort((a, b) => (b.fullDate + " " + b.ora).localeCompare(a.fullDate + " " + a.ora));
+        populateOperators();
+        renderList();
+    }
+
+    function populateOperators() {
+        const opSelect = document.getElementById("fOperatore");
+        const eOpSelect = document.getElementById("eOp"); 
+        const currentSelected = opSelect.value;
+        
+        let ops = new Set();
+        allApps.forEach(a => { if(a.op && a.op !== '-' && a.op.trim() !== '') ops.add(a.op); });
+        
+        let html = '<option value="all">Tutti</option>';
+        Array.from(ops).sort().forEach(op => { html += `<option value="${op}">${op}</option>`; });
+        opSelect.innerHTML = html;
+        if(ops.has(currentSelected)) opSelect.value = currentSelected;
+
+        if(eOpSelect && window.allUsersData) {
+            const currentEOp = eOpSelect.value;
+            let eHtml = '<option value="">-- Seleziona Operatore --</option>';
+            Object.values(window.allUsersData).forEach(u => {
+                const isGhost = (u.attivo === false || u.attiva === false || u.eliminato === true || u.deleted === true || u.attivo === "false" || u.attiva === "false" || u.eliminato === "true" || u.deleted === "true");
+                if(String(u.structureId) === String(window.twStructId) && !isGhost) {
+                    const fullName = `${u.name || ''} ${u.surname || ''}`.trim();
+                    eHtml += `<option value="${fullName}">${fullName} (${u.nick})</option>`; 
+                }
+            });
+            eOpSelect.innerHTML = eHtml;
+            eOpSelect.value = currentEOp;
+        }
+    }
+
+    function getFilteredData() {
+        const query = (document.getElementById("searchInput").value || "").toLowerCase().trim();
+        const fAnno = document.getElementById("fAnno").value;
+        const fMese = document.getElementById("fMese").value;
+        const fDal = document.getElementById("fDataDal").value;
+        const fAl = document.getElementById("fDataAl").value;
+        const fStato = document.getElementById("fStato").value;
+        const fTipo = document.getElementById("fTipo").value;
+        const fOp = document.getElementById("fOperatore").value;
+        const fDettaglio = document.getElementById("fDettaglioMassaggio").value.toLowerCase().trim();
+        
+        return allApps.filter(a => {
+            if(query.length >= 5) {
+                const matchQuery = (a.cog || '').toLowerCase().includes(query) || (a.cam || '').toString().toLowerCase().includes(query) || (a.id || '').toLowerCase().includes(query);
+                if(!matchQuery) return false;
+            } else {
+                if(fDal || fAl) {
+                    if (fDal && a.fullDate < fDal) return false;
+                    if (fAl && a.fullDate > fAl) return false;
+                } else {
+                    const dParts = (a.fullDate || "").split('-'); 
+                    if(fAnno !== 'all' && dParts.length > 0 && dParts[0] !== fAnno) return false;
+                    if(fMese !== 'all' && dParts.length > 1 && dParts[1] !== fMese) return false;
+                }
+            }
+            if (fOp !== 'all' && a.op !== fOp) return false;
+            if(fStato === 'eseguito' && !a.eseguito) return false;
+            if(fStato === 'pagato' && !a.pagato) return false;
+            if(fStato === 'dapagare' && a.pagato) return false;
+
+            const servNome = (a.serv || '').toLowerCase();
+            if(fTipo === 'spa' && !servNome.includes('spa') && !servNome.includes('percors')) return false;
+            if(fTipo === 'massaggi') {
+                if(!servNome.includes('massagg') && !servNome.includes('ritual') && !servNome.includes('lomi') && !servNome.includes('thai')) return false; 
+                if(fDettaglio && !servNome.includes(fDettaglio)) return false;
+            }
+
+            return true;
+        });
+    }
+
+    function renderList() {
+        let filtered = getFilteredData();
+        const container = document.getElementById("listView");
+        
+        if(filtered.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-muted); font-size:16px;">Nessun appuntamento corrisponde ai criteri di ricerca.</div>`;
+            return;
+        }
+
+        let html = `
+        <div class="table-responsive">
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th>Nr. App.</th>
+                        <th>Cliente</th>
+                        <th>Data e Ora</th>
+                        <th style="min-width: 250px;">Trattamento</th>
+                        <th>Operatore</th>
+                        <th>Fattura</th>
+                        <th>Cod. Cliente</th>
+                        <th>Prezzo</th>
+                        <th style="text-align:center">Eseguito</th>
+                        <th style="text-align:center">Pagato</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let processedTwins = new Set();
+
+        filtered.forEach(a => {
+            if(processedTwins.has(a.id)) return;
+
+            let finalOp = a.op || '-';
+            let finalPrice = parseFloat(a.price || 0);
+            let badgeCouple = "";
+            let rowClass = "";
+
+            if (a.pagato) rowClass = "row-pagato";
+            else if (a.eseguito) rowClass = "row-eseguito";
+
+            if(a.isCouple && a.linkedId) {
+                const twin = filtered.find(x => x.id === a.linkedId);
+                if(twin) {
+                    processedTwins.add(twin.id);
+                    finalOp = `${a.op || '-'} <br><span style="color:var(--text-muted); font-size:10px;">& ${twin.op || '-'}</span>`;
+                    finalPrice += parseFloat(twin.price || 0);
+                    badgeCouple = `<br><span style="background:var(--purple); color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;">MASSAGGIO DI COPPIA</span>`;
+                    rowClass += " row-couple";
+                }
+            }
+
+            const dParts = (a.fullDate || "").split('-');
+            const displayDate = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : a.fullDate;
+            const safeName = (a.cog || 'N.D.').replace(/'/g, "\'");
+            const shortId = a.id.replace("APP", "").replace("TWIN_", "").substring(0, 6);
+
+            html += `
+            <tr class="${rowClass}">
+                <td><span class="link-blue" onclick="openEditModal('${a.id}')">${shortId}</span></td>
+                <td><span class="client-name" onclick="if(window.sysOpenCustomerProfile) window.sysOpenCustomerProfile(event, '${safeName}')">${a.cog || 'N.D.'}</span><br><span style="font-size:11px; color:var(--text-muted)">Cam: ${a.cam || '?'}</span></td>
+                <td><b>${displayDate}</b><br><span style="color:var(--text-muted);">${a.ora}</span></td>
+                <td style="white-space:normal; line-height:1.4;">${a.serv || '-'} ${badgeCouple}</td>
+                <td><b>${finalOp}</b></td>
+                <td ondblclick="window.inlineEdit(this, '${a.id}', '${a.fullDate}', 'fattura')"><span style="color:var(--gold); cursor:pointer;" title="Doppio clic per modificare">${a.fattura || '-'}</span></td>
+                <td ondblclick="window.inlineEdit(this, '${a.id}', '${a.fullDate}', 'codCliente')"><span style="color:var(--accent); cursor:pointer;" title="Doppio clic per modificare">${a.codCliente || '-'}</span></td>
+                <td><b>€ ${finalPrice.toFixed(2).replace('.', ',')}</b></td>
+                <td style="text-align:center;">
+                    <label class="switch" style="margin:0;">
+                        <input type="checkbox" class="eseg-switch" onchange="toggleState('${a.id}', '${a.fullDate}', 'eseguito')" ${a.eseguito ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </td>
+                <td style="text-align:center;">
+                    <label class="switch" style="margin:0;">
+                        <input type="checkbox" onchange="toggleState('${a.id}', '${a.fullDate}', 'pagato')" ${a.pagato ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </td>
+                <td style="text-align:center;">
+                    <i class="material-icons-round" style="color:var(--red); font-size:18px; cursor:pointer;" onclick="promptDelete('${a.id}', '${a.fullDate}')">delete</i>
+                </td>
+            </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+        container.innerHTML = html;
+    }
+
+    function toggleState(appId, date, field) {
+        let dayArray = window.normalizeFbArray(window.db.app[date]);
+        const idx = dayArray.findIndex(x => x && x.id === appId);
+        if(idx > -1) {
+            const newVal = !dayArray[idx][field];
+            dayArray[idx][field] = newVal;
+            
+            if(dayArray[idx].linkedId) {
+                const tIdx = dayArray.findIndex(x => x && x.id === dayArray[idx].linkedId);
+                if(tIdx > -1) dayArray[tIdx][field] = newVal;
+            }
+
+            firebase.database().ref('MASTER_ADMIN_DB/structures_data/' + localStructId + '/app/' + date).set(dayArray).then(() => {
+                window.showToast("Aggiornato!");
+            });
+        }
+    }
+
+    function openEditModal(id) {
+        const app = allApps.find(a => a.id === id);
+        if(!app) return;
+        
+        if(app.isCouple) {
+            return window.showToast("Questo è un massaggio di coppia. Modificalo dall'Agenda principale per gestire le cabine.");
+        }
+
+        document.getElementById("eId").value = app.id; document.getElementById("eOldDate").value = app.fullDate;
+        document.getElementById("eDate").value = app.fullDate; document.getElementById("eOra").value = app.ora;
+        document.getElementById("eCam").value = app.cam || ""; document.getElementById("eCog").value = app.cog || "";
+        document.getElementById("eTel").value = app.tel || ""; document.getElementById("eOp").value = app.op || "";
+        document.getElementById("eFattura").value = app.fattura || ""; document.getElementById("eCodCliente").value = app.codCliente || "";
+        document.getElementById("eNote").value = app.note || ""; document.getElementById("eCab").value = app.cab || "1";
+        document.getElementById("eServName").innerText = `${app.serv || 'N.D.'} (${app.dur || 30} min - ${app.price || 0} €)`;
+        document.getElementById("editModal").style.display = "flex";
+    }
+
+    function saveEdit() {
+        const id = document.getElementById("eId").value; 
+        const selDate = document.getElementById("eDate").value; 
+        const oldDate = document.getElementById("eOldDate").value;
+        
+        let oldAppsArray = window.normalizeFbArray(window.db.app[oldDate]);
+        let rawApp = oldAppsArray.find(a => a.id === id);
+        if(!rawApp) return window.showErrorToast("Errore: appuntamento non trovato nel database.");
+
+        rawApp.ora = document.getElementById("eOra").value; 
+        rawApp.cam = document.getElementById("eCam").value;
+        rawApp.cog = document.getElementById("eCog").value.trim(); 
+        rawApp.tel = document.getElementById("eTel").value.trim();
+        rawApp.op = document.getElementById("eOp").value; 
+        rawApp.note = document.getElementById("eNote").value;
+        rawApp.fattura = document.getElementById("eFattura").value.trim();
+        rawApp.codCliente = document.getElementById("eCodCliente").value.trim();
+
+        if (window.sanitizePayload) rawApp = window.sanitizePayload(rawApp);
+
+        if(window.sysFinalizeSaveApp) {
+            window.sysFinalizeSaveApp(rawApp, selDate, oldDate);
+            document.getElementById("editModal").style.display = "none";
+        } else {
+            window.showErrorToast("Errore di Sistema: Modulo salvataggio non trovato.");
+        }
+    }
+
+    function promptDelete(id, date) {
+        if(window.sysExecuteDeleteApp) {
+            const operatorName = localStorage.getItem("tw_user") || "Staff SPA";
+            window.sysExecuteDeleteApp("Cancellazione rapida", operatorName, id, date);
+            const editModal = document.getElementById("editModal");
+            if(editModal) editModal.style.display = "none";
+        } else {
+            window.showErrorToast("Errore di Sistema: Modulo cancellazione non trovato.");
+        }
+    }
+
+    function shareWA() {
+        const telInput = document.getElementById("eTel").value;
+        const nome = document.getElementById("eCog").value || "Ospite";
+        const data = document.getElementById("eDate").value.split('-').reverse().join('/');
+        const ora = document.getElementById("eOra").value;
+        const servTestoBase = document.getElementById("eServName").innerText || "";
+        const servTesto = servTestoBase.split('(')[0].trim(); 
+
+        if(telInput) {
+            const appData = { nome: nome, data: data, ora: ora, servizio: servTesto, tel: telInput };
+            if(typeof window.sysOpenTemplateSelector === 'function') { window.sysOpenTemplateSelector(appData); } 
+            else { window.showToast("Errore: Modulo Template non trovato."); }
+        } else {
+            window.showToast("Devi prima inserire il numero di telefono del cliente.");
+        }
+    }
+    
+    function escapeHtml(text) {
+        if (!text) return "-";
+        return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function exportDataToExcel() {
+        let filtered = getFilteredData(); 
+        if(filtered.length === 0) return window.showToast("Nessun dato corrispondente ai filtri da esportare.");
+
+        let tableHTML = `
+            <table border="1">
+                <thead>
+                    <tr style="background-color: #f8fafc; font-weight: bold; font-size: 14px;">
+                        <th style="padding: 10px;">DATA</th>
+                        <th style="padding: 10px;">ORARIO</th>
+                        <th style="padding: 10px;">NOME E COGNOME</th>
+                        <th style="padding: 10px;">CAMERA</th>
+                        <th style="padding: 10px;">TRATTAMENTO</th>
+                        <th style="padding: 10px;">OPERATORE</th>
+                        <th style="padding: 10px;">NUM. FATTURA</th>
+                        <th style="padding: 10px;">COD. CLIENTE</th>
+                        <th style="padding: 10px;">TELEFONO</th>
+                        <th style="padding: 10px;">NOTE</th>
+                        <th style="padding: 10px;">STATO</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let processedTwins = new Set();
+
+        filtered.forEach(a => {
+            if(processedTwins.has(a.id)) return;
+
+            let finalOp = a.op || '-';
+            let finalPrice = parseFloat(a.price || 0);
+
+            if(a.isCouple && a.linkedId) {
+                const twin = filtered.find(x => x.id === a.linkedId);
+                if(twin) {
+                    processedTwins.add(twin.id);
+                    finalOp = `${a.op || '-'} & ${twin.op || '-'}`;
+                    finalPrice += parseFloat(twin.price || 0);
+                }
+            }
+
+            const dParts = (a.fullDate || "").split('-');
+            const dataStr = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : a.fullDate;
+            
+            let statoArr = [];
+            if(a.eseguito) statoArr.push("Eseguito");
+            if(a.pagato) statoArr.push("Pagato");
+            if(statoArr.length === 0) statoArr.push("In Attesa / Non Pagato");
+            const stato = statoArr.join(" e ");
+
+            const servText = a.isCouple ? `${a.serv} (COPPIA)` : a.serv;
+
+            tableHTML += `
+                <tr>
+                    <td style="padding: 8px; text-align: center;">${dataStr}</td>
+                    <td style="padding: 8px; text-align: center;">${escapeHtml(a.ora)}</td>
+                    <td style="padding: 8px;">${escapeHtml(a.cog)}</td>
+                    <td style="padding: 8px; text-align: center;">${escapeHtml(a.cam)}</td>
+                    <td style="padding: 8px;">${escapeHtml(servText)}</td>
+                    <td style="padding: 8px; text-align: center;">${escapeHtml(finalOp)}</td>
+                    <td style="padding: 8px; text-align: center;">${escapeHtml(a.fattura)}</td>
+                    <td style="padding: 8px; text-align: center;">${escapeHtml(a.codCliente)}</td>
+                    <td style="padding: 8px; text-align: center;">${escapeHtml(a.tel)}</td>
+                    <td style="padding: 8px;">${escapeHtml(a.note)}</td>
+                    <td style="padding: 8px; font-weight: bold;">${stato}</td>
+                </tr>
+            `;
+        });
+
+        tableHTML += `</tbody></table>`;
+
+        const uri = 'data:application/vnd.ms-excel;base64,';
+        const template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body>{table}</body></html>';
+        
+        const base64 = function(s) { return window.btoa(unescape(encodeURIComponent(s))) };
+        const format = function(s, c) { return s.replace(/{(\w+)}/g, function(m, p) { return c[p]; }) };
+        
+        const fAnno = document.getElementById("fAnno").value;
+        const fMese = document.getElementById("fMese").value;
+        
+        const ctx = { worksheet: 'Report_SPA', table: tableHTML };
+        const link = document.createElement("a");
+        link.download = `Export_Touch_Welness_SPA_${fAnno}_${fMese}.xls`;
+        link.href = uri + base64(format(template, ctx));
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    window.inlineEdit = function(td, id, date, field) {
+        if(td.querySelector('input')) return; 
+        const currentSpan = td.querySelector('span');
+        const currentText = currentSpan.innerText === '-' ? '' : currentSpan.innerText;
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentText;
+        input.style.cssText = 'width:100%; padding:8px; font-weight:bold; border-radius:5px; border:2px solid var(--accent); background:var(--bg-body); color:var(--text-main); outline:none; text-align:center; font-size:13px;';
+        
+        td.innerHTML = '';
+        td.appendChild(input);
+        input.focus();
+
+        input.onblur = function() { window.saveInline(td, id, date, field, input.value, currentText); };
+        input.onkeydown = function(e) { 
+            if(e.key === 'Enter') input.blur(); 
+            else if(e.key === 'Escape') { 
+                td.innerHTML = ''; td.appendChild(currentSpan); 
+            } 
+        };
+    };
+
+    window.saveInline = function(td, id, date, field, newValue, oldValue) {
+        newValue = newValue.trim();
+        const color = field === 'fattura' ? 'var(--gold)' : 'var(--accent)';
+        if(newValue === oldValue) {
+            td.innerHTML = `<span style="color:${color}; cursor:pointer;" title="Doppio clic per modificare">${newValue || '-'}</span>`;
+            return;
+        }
+
+        let dayArray = window.normalizeFbArray(window.db.app[date]);
+        const idx = dayArray.findIndex(x => x && x.id === id);
+        if(idx > -1) {
+            dayArray[idx][field] = newValue;
+            if(dayArray[idx].linkedId) {
+                const tIdx = dayArray.findIndex(x => x && x.id === dayArray[idx].linkedId);
+                if(tIdx > -1) dayArray[tIdx][field] = newValue;
+            }
+
+            firebase.database().ref('MASTER_ADMIN_DB/structures_data/' + localStructId + '/app/' + date).set(dayArray).then(() => {
+                td.innerHTML = `<span style="color:${color}; cursor:pointer;" title="Doppio clic per modificare">${newValue || '-'}</span>`;
+                window.showToast("Dato aggiornato!");
+            }).catch(err => {
+                window.showErrorToast("Errore di salvataggio");
+                td.innerHTML = `<span style="color:${color}; cursor:pointer;" title="Doppio clic per modificare">${oldValue || '-'}</span>`;
+            });
+        }
+    };
+
+    window.render();
+</script>
+</body>
+</html>

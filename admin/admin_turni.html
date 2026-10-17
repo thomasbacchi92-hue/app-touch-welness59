@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gestione Turni HR - TOUCH WELNESS</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+  :root { --bg-body: #0f172a; --bg-panel: #1e293b; --border-line: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #38bdf8; --gold: #fbbf24; --green: #10b981; --red: #ef4444; --purple: #a855f7; }
+  :root.light-theme { --bg-body: #f8fafc; --bg-panel: #ffffff; --border-line: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+  body { font-family: -apple-system, sans-serif; background: var(--bg-body); margin: 0; color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  * { box-sizing: border-box; }
+  .navbar { background: var(--bg-panel); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--purple); z-index: 10; flex-shrink: 0; }
+  .navbar h1 { margin: 0; font-size: 18px; color: var(--purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 1px;}
+  .btn-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.2s; font-size: 13px; }
+  .btn-action:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+  .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-line); }
+  .btn-purple { background: var(--purple); color: white; border: none;}
+  .main-content { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; align-items: center; }
+  .container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 20px; }
+  .card { background: var(--bg-panel); border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-line); }
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
+  .form-input { width: 100%; padding: 12px; border: 1px solid var(--border-line); border-radius: 8px; font-size: 14px; background: var(--bg-body); color: var(--text-main); color-scheme: dark; outline: none; transition: 0.2s; }
+  .form-input:focus { border-color: var(--purple); box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3); }
+  .top-filters { display: flex; gap: 15px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid var(--border-line); align-items: flex-end; flex-wrap: wrap; }
+  .nav-week { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; border-bottom: 2px solid var(--border-line); padding-bottom: 15px; flex-wrap:wrap; gap:10px;}
+  .week-label { font-size: 16px; font-weight: 900; color: var(--accent); text-transform: uppercase; }
+  .preset-bar { display:flex; gap:10px; overflow-x:auto; padding: 15px; background: var(--bg-body); border-radius: 12px; border: 1px solid var(--border-line); margin-bottom: 20px; align-items: center; }
+  .preset-btn { background:var(--bg-panel); border:1px solid var(--border-line); color:var(--text-main); padding:8px 15px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:0.2s;}
+  .preset-btn:hover { border-color:var(--purple); color:var(--purple); }
+  .shift-card { background: var(--bg-body); border: 1px solid var(--border-line); border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 5px solid var(--border-line); transition:0.2s; display: flex; flex-direction: column; gap: 15px;}
+  .shift-card:hover { border-color: var(--purple); }
+  .shift-header { display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:10px;}
+  .shift-title { font-weight: 900; color: var(--text-main); font-size: 16px; text-transform: uppercase; display: flex; align-items: center; gap: 10px;}
+  .day-badge { background: var(--bg-panel); border: 1px solid var(--border-line); padding: 5px 10px; border-radius: 6px; font-size: 14px; color: var(--accent); }
+  .shift-times { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px dashed var(--border-line);}
+  .time-col { display: flex; flex-direction: column; gap: 8px; }
+  .time-input-wrap { display: flex; align-items: center; justify-content: space-between; background: var(--bg-panel); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-line); }
+  .time-input-wrap span { font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; }
+  .time-input-wrap input { background: transparent; border: none; color: var(--text-main); font-weight: bold; font-size: 15px; outline: none; color-scheme: dark; width: 100px; text-align: right;}
+  #toastBlue { visibility: hidden; min-width: 250px; background: var(--purple); color: white; text-align: center; border-radius: 8px; padding: 16px; position: fixed; right: 30px; bottom: 30px; z-index: 9999; font-size: 14px; font-weight: bold; opacity: 0; transition: 0.5s; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+  #toastBlue.show { visibility: visible; opacity: 1; bottom: 40px; }
+</style>
+<script>if(localStorage.getItem('tw_admin_theme') === 'light') document.documentElement.classList.add('light-theme');</script>
+</head>
+<body>
+
+<div id="toastBlue">Notifica</div>
+
+<div class="navbar">
+    <h1><i class="material-icons-round">calendar_month</i> Gestione Turni HR</h1>
+    <button class="btn-action btn-outline" onclick="if(window.parent && window.parent.app && typeof window.parent.app.switchView === 'function') { window.parent.app.switchView('stats'); } else { window.history.back(); }">
+        <i class="material-icons-round">arrow_back</i> TORNA ALLA DASHBOARD
+    </button>
+</div>
+
+<div class="main-content">
+    <div class="container">
+        <div class="card" id="selStructBox">
+            <div class="top-filters">
+                <div class="form-group" style="flex: 1; margin:0;">
+                    <label>1. Seleziona Struttura SPA</label>
+                    <select id="selStruct" class="form-input" style="border-color:var(--accent);" onchange="turniApp.onStructChange()">
+                        <option value="">-- Caricamento Strutture... --</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="opSelectBox" style="display:none; padding:15px 25px;">
+            <div class="form-group" style="margin:0;">
+                <label>Seleziona Operatore da programmare</label>
+                <select id="selOp" class="form-input" style="border-color:var(--gold); font-size:16px; font-weight:bold; color:var(--gold);" onchange="turniApp.renderGrid()">
+                    <option value="">-- Scegli Operatore --</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="workspace" style="display: none;">
+            <div class="card" style="background: rgba(168, 85, 247, 0.05); border-color: rgba(168, 85, 247, 0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+                    <div>
+                        <h3 style="margin:0; color:var(--purple); display:flex; align-items:center; gap:8px;"><i class="material-icons-round">auto_awesome</i> Auto-Pilota Operatore</h3>
+                        <p style="margin:5px 0 0 0; font-size:12px; color:var(--text-muted);">Genera automaticamente i turni di questo operatore basati sulle sue preferenze.</p>
+                    </div>
+                    <button class="btn-action btn-purple" onclick="turniApp.generateSmartPlanning()">GENERA TURNI AI</button>
+                </div>
+            </div>
+
+            <div class="nav-week">
+                <div style="display:flex; gap:10px;">
+                    <select id="navMonth" class="form-input" style="width:140px; margin:0;" onchange="turniApp.jumpToMonth()">
+                        <option value="0">Gennaio</option><option value="1">Febbraio</option><option value="2">Marzo</option><option value="3">Aprile</option>
+                        <option value="4">Maggio</option><option value="5">Giugno</option><option value="6">Luglio</option><option value="7">Agosto</option>
+                        <option value="8">Settembre</option><option value="9">Ottobre</option><option value="10">Novembre</option><option value="11">Dicembre</option>
+                    </select>
+                    <select id="navYear" class="form-input" style="width:90px; margin:0;" onchange="turniApp.jumpToMonth()">
+                        <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+                    </select>
+                </div>
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <button class="btn-action btn-outline" style="padding:8px 12px;" onclick="turniApp.changeWeek(-1)"><i class="material-icons-round">chevron_left</i></button>
+                    <div id="weekLabel" class="week-label">DAL -- AL --</div>
+                    <button class="btn-action btn-outline" style="padding:8px 12px;" onclick="turniApp.changeWeek(1)"><i class="material-icons-round">chevron_right</i></button>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-action btn-outline" style="padding:10px 15px; border-color:var(--accent); color:var(--accent);" onclick="turniApp.jumpToToday()">OGGI</button>
+                    <button class="btn-action btn-outline" style="padding:10px 15px;" onclick="turniApp.printTurniPDF()"><i class="material-icons-round">print</i> PDF</button>
+                </div>
+            </div>
+
+            <div class="preset-bar">
+                <span style="font-size:11px; color:var(--text-muted); font-weight:bold; text-transform:uppercase;">Preset Rapidi:</span>
+                <button class="preset-btn" onclick="turniApp.applyPreset('09:00','14:00','','')"><i class="material-icons-round" style="font-size:14px; vertical-align:middle;">wb_sunny</i> Mattina (09-14)</button>
+                <button class="preset-btn" onclick="turniApp.applyPreset('14:00','20:00','','')"><i class="material-icons-round" style="font-size:14px; vertical-align:middle;">brightness_4</i> Pomeriggio (14-20)</button>
+                <button class="preset-btn" onclick="turniApp.applyPreset('09:00','20:00','','')"><i class="material-icons-round" style="font-size:14px; vertical-align:middle;">work</i> Intero (09-20)</button>
+                <button class="preset-btn" onclick="turniApp.applyPreset('09:00','13:00','15:00','19:00')"><i class="material-icons-round" style="font-size:14px; vertical-align:middle;">flip</i> Spezzato</button>
+                <div style="flex:1;"></div>
+                <button class="btn-action btn-outline" style="padding:8px 15px; border-color:var(--gold); color:var(--gold);" onclick="turniApp.copyMondayToAll()"><i class="material-icons-round" style="font-size:16px;">content_copy</i> COPIA LUNEDÌ</button>
+            </div>
+
+            <div id="gridContainer"></div>
+
+            <button class="btn-action w-100 btn-purple" style="padding: 20px; font-size: 16px; margin-top: 10px;" onclick="turniApp.saveWeek()">
+                <i class="material-icons-round" style="font-size:24px;">save</i> SALVA E PUBBLICA TURNI
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    if(urlParams.get('mode') === 'tab') {
+        document.querySelector('.navbar').style.display = 'none';
+        document.querySelector('.main-content').style.padding = '0px';
+        document.querySelector('.container').style.maxWidth = '100%';
+    }
+
+    const fbConfig = { apiKey: "AIzaSyCrDuK7SWHdbzrJR-pNpxmRwGnZgV2Dd2Y", authDomain: "touch-welness-massage.firebaseapp.com", databaseURL: "https://touch-welness-massage-default-rtdb.europe-west1.firebasedatabase.app", projectId: "touch-welness-massage", storageBucket: "touch-welness-massage.firebasestorage.app" };
+    if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+
+    window.turniApp = {
+        db: firebase.database().ref('MASTER_ADMIN_DB'),
+        allStructures: {}, allUsers: {}, currentDate: new Date(), localSpaId: localStorage.getItem("tw_structure_id"),
+        
+        init: function() {
+            document.getElementById('navMonth').value = this.currentDate.getMonth();
+            document.getElementById('navYear').value = this.currentDate.getFullYear();
+
+            const storedStruct = localStorage.getItem('tw_admin_current_struct');
+            if (storedStruct) this.localSpaId = storedStruct;
+
+            this.db.child('users').on('value', snap => {
+                this.allUsers = snap.val() || {};
+                if(this.localSpaId && this.localSpaId !== "Sconosciuta" && this.localSpaId !== "MASTER") {
+                    document.getElementById('selStructBox').style.display = 'none';
+                    const sel = document.getElementById('selStruct');
+                    sel.innerHTML = `<option value="${this.localSpaId}">Locale</option>`;
+                    sel.value = this.localSpaId;
+                    this.onStructChange();
+                } else {
+                    this.db.child('structures').once('value').then(sSnap => {
+                        this.allStructures = sSnap.val() || {};
+                        const sel = document.getElementById('selStruct');
+                        sel.innerHTML = '<option value="">-- Seleziona Struttura SPA --</option>';
+                        Object.values(this.allStructures).forEach(s => { if(!s.archived) sel.innerHTML += `<option value="${s.id}">${s.name}</option>`; });
+                    });
+                }
+            });
+        },
+
+        showToast: function(msg) { const t = document.getElementById("toastBlue"); t.innerText = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 3000); },
+        onStructChange: function() {
+            const sid = document.getElementById('selStruct').value;
+            const opBox = document.getElementById('opSelectBox'); const opSel = document.getElementById('selOp'); const ws = document.getElementById('workspace');
+            if(!sid) { opBox.style.display = 'none'; ws.style.display = 'none'; return; }
+            opBox.style.display = 'block'; opSel.disabled = false; opSel.innerHTML = '<option value="">-- Seleziona Operatore --</option>';
+            let foundCount = 0; Object.values(this.allUsers).forEach(u => { if(u.structureId === sid) { opSel.innerHTML += `<option value="${u.nick}">${u.name} ${u.surname||''} (${u.nick})</option>`; foundCount++; } });
+            if(foundCount === 0) { opSel.innerHTML = '<option value="">Nessun operatore</option>'; opSel.disabled = true; }
+            ws.style.display = 'none';
+        },
+        changeWeek: function(offset) { this.currentDate.setDate(this.currentDate.getDate() + (offset * 7)); this.renderGrid(); },
+        jumpToMonth: function() { const m = parseInt(document.getElementById('navMonth').value); const y = parseInt(document.getElementById('navYear').value); this.currentDate = new Date(y, m, 1); this.renderGrid(); },
+        jumpToToday: function() { this.currentDate = new Date(); this.renderGrid(); },
+        toggleShiftMode: function(dateStr) {
+            const type = document.getElementById(`type_${dateStr}`).value; const timeBox = document.getElementById(`times_${dateStr}`); const card = document.getElementById(`card_${dateStr}`);
+            if(type === 'lavoro') { timeBox.style.display = 'grid'; card.style.borderLeftColor = 'var(--accent)'; } 
+            else { timeBox.style.display = 'none'; if(type === 'malattia') card.style.borderLeftColor = 'var(--red)'; else if(type === 'ferie') card.style.borderLeftColor = 'var(--green)'; else card.style.borderLeftColor = 'var(--border-line)'; }
+        },
+        renderGrid: function() {
+            const sid = document.getElementById('selStruct').value; const opNick = document.getElementById('selOp').value; const ws = document.getElementById('workspace'); const grid = document.getElementById('gridContainer');
+            if(!sid || !opNick) { ws.style.display = 'none'; return; } ws.style.display = 'block';
+            const dayOfWeek = this.currentDate.getDay(); const diffToMonday = this.currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            const startOfWeek = new Date(this.currentDate); startOfWeek.setDate(diffToMonday);
+            const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate() + 6);
+            document.getElementById('navMonth').value = startOfWeek.getMonth(); document.getElementById('navYear').value = startOfWeek.getFullYear(); document.getElementById('weekLabel').innerText = `DAL ${startOfWeek.toLocaleDateString('it-IT')} AL ${endOfWeek.toLocaleDateString('it-IT')}`;
+            grid.innerHTML = "<div style='text-align:center; padding:40px; color:var(--accent);'>Generazione Turni...</div>";
+
+            this.db.child(`structures_data/${sid}/turni`).once('value').then(snap => {
+                const allTurni = snap.val() || {}; let html = "";
+                for(let i=0; i<7; i++) {
+                    const currentDay = new Date(startOfWeek); currentDay.setDate(startOfWeek.getDate() + i);
+                    const dateStr = `${currentDay.getFullYear()}-${String(currentDay.getMonth()+1).padStart(2,'0')}-${String(currentDay.getDate()).padStart(2,'0')}`;
+                    const dayName = currentDay.toLocaleDateString('it-IT', { weekday: 'long' }); const dayNum = currentDay.getDate();
+                    let shift = allTurni[dateStr] ? allTurni[dateStr][opNick] : null;
+                    let type, s1, e1, s2, e2;
+                    if(shift) { type = shift.type; s1 = shift.start || "09:00"; e1 = shift.end || "18:00"; s2 = shift.start2 || ""; e2 = shift.end2 || ""; } 
+                    else { type = (i === 6) ? "libero" : "lavoro"; s1 = "09:00"; e1 = "18:00"; s2 = ""; e2 = ""; }
+                    const displayTimes = type === 'lavoro' ? 'grid' : 'none'; let borderColor = "var(--border-line)"; if(type === 'lavoro') borderColor = "var(--accent)"; if(type === 'malattia') borderColor = "var(--red)"; if(type === 'ferie') borderColor = "var(--green)";
+                    html += `
+                    <div class="shift-card" id="card_${dateStr}" style="border-left-color:${borderColor};">
+                        <div class="shift-header">
+                            <div class="shift-title"><span class="day-badge">${dayNum}</span> ${dayName}</div>
+                            <select id="type_${dateStr}" class="form-input" style="width:200px; margin:0; padding:10px; font-weight:bold; cursor:pointer;" onchange="turniApp.toggleShiftMode('${dateStr}')">
+                                <option value="lavoro" ${type==='lavoro'?'selected':''}>In Turno SPA</option>
+                                <option value="libero" ${type==='libero'?'selected':''}>Riposo / Libero</option>
+                                <option value="malattia" ${type==='malattia'?'selected':''}>Assenza: Malattia</option>
+                                <option value="ferie" ${type==='ferie'?'selected':''}>Assenza: Ferie/Permesso</option>
+                            </select>
+                        </div>
+                        <div id="times_${dateStr}" class="shift-times" style="display:${displayTimes};">
+                            <div class="time-col">
+                                <div style="font-size:11px; color:var(--text-muted); font-weight:bold; text-transform:uppercase;">Turno 1</div>
+                                <div class="time-input-wrap"><span>Inizio</span><input type="time" id="s1_${dateStr}" value="${s1}"></div>
+                                <div class="time-input-wrap"><span>Fine</span><input type="time" id="e1_${dateStr}" value="${e1}"></div>
+                            </div>
+                            <div class="time-col">
+                                <div style="font-size:11px; color:var(--text-muted); font-weight:bold; text-transform:uppercase;">Turno 2 (Spezzato)</div>
+                                <div class="time-input-wrap"><span>Inizio</span><input type="time" id="s2_${dateStr}" value="${s2}"></div>
+                                <div class="time-input-wrap"><span>Fine</span><input type="time" id="e2_${dateStr}" value="${e2}"></div>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+                grid.innerHTML = html;
+            });
+        },
+        applyPreset: function(s1, e1, s2, e2) {
+            const dayOfWeek = this.currentDate.getDay(); const diffToMonday = this.currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); const startOfWeek = new Date(this.currentDate); startOfWeek.setDate(diffToMonday);
+            for(let i=0; i<7; i++) {
+                const currentDay = new Date(startOfWeek); currentDay.setDate(startOfWeek.getDate() + i);
+                const dateStr = `${currentDay.getFullYear()}-${String(currentDay.getMonth()+1).padStart(2,'0')}-${String(currentDay.getDate()).padStart(2,'0')}`;
+                const selType = document.getElementById(`type_${dateStr}`);
+                if(selType && selType.value === 'lavoro') { document.getElementById(`s1_${dateStr}`).value = s1; document.getElementById(`e1_${dateStr}`).value = e1; document.getElementById(`s2_${dateStr}`).value = s2; document.getElementById(`e2_${dateStr}`).value = e2; }
+            }
+            this.showToast("Preset applicato!");
+        },
+        copyMondayToAll: function() {
+            const dayOfWeek = this.currentDate.getDay(); const diffToMonday = this.currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); const startOfWeek = new Date(this.currentDate); startOfWeek.setDate(diffToMonday);
+            const monDateStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth()+1).padStart(2,'0')}-${String(startOfWeek.getDate()).padStart(2,'0')}`;
+            const monType = document.getElementById(`type_${monDateStr}`).value; if(monType !== 'lavoro') return this.showToast("Il lunedì deve essere su 'In Turno SPA' per poter copiare gli orari.");
+            const ms1 = document.getElementById(`s1_${monDateStr}`).value; const me1 = document.getElementById(`e1_${monDateStr}`).value; const ms2 = document.getElementById(`s2_${monDateStr}`).value; const me2 = document.getElementById(`e2_${monDateStr}`).value;
+            for(let i=1; i<7; i++) {
+                const currentDay = new Date(startOfWeek); currentDay.setDate(startOfWeek.getDate() + i); const dateStr = `${currentDay.getFullYear()}-${String(currentDay.getMonth()+1).padStart(2,'0')}-${String(currentDay.getDate()).padStart(2,'0')}`;
+                const selType = document.getElementById(`type_${dateStr}`); if(selType && selType.value === 'lavoro') { document.getElementById(`s1_${dateStr}`).value = ms1; document.getElementById(`e1_${dateStr}`).value = me1; document.getElementById(`s2_${dateStr}`).value = ms2; document.getElementById(`e2_${dateStr}`).value = me2; }
+            }
+            this.showToast("Orari del Lunedì copiati.");
+        },
+        saveWeek: function() {
+            const sid = document.getElementById('selStruct').value; const opNick = document.getElementById('selOp').value; if(!sid || !opNick) return this.showToast("Errore di selezione.");
+            const dayOfWeek = this.currentDate.getDay(); const diffToMonday = this.currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); const startOfWeek = new Date(this.currentDate); startOfWeek.setDate(diffToMonday);
+            const dbTurniRef = this.db.child(`structures_data/${sid}/turni`); let updatePromises = [];
+            for(let i=0; i<7; i++) {
+                const currentDay = new Date(startOfWeek); currentDay.setDate(startOfWeek.getDate() + i); const dateStr = `${currentDay.getFullYear()}-${String(currentDay.getMonth()+1).padStart(2,'0')}-${String(currentDay.getDate()).padStart(2,'0')}`;
+                const typeEl = document.getElementById(`type_${dateStr}`); if(!typeEl) continue; 
+                const type = typeEl.value; const refDayUser = dbTurniRef.child(dateStr).child(opNick);
+                if (type === 'lavoro') { const s1 = document.getElementById(`s1_${dateStr}`).value; const e1 = document.getElementById(`e1_${dateStr}`).value; const s2 = document.getElementById(`s2_${dateStr}`).value; const e2 = document.getElementById(`e2_${dateStr}`).value; updatePromises.push(refDayUser.set({ type: 'lavoro', start: s1, end: e1, start2: s2, end2: e2 })); } 
+                else { updatePromises.push(refDayUser.set({ type: type })); }
+            }
+            Promise.all(updatePromises).then(() => {
+                this.showToast("✅ Turni salvati con successo!");
+                const authUser = localStorage.getItem("tw_user") || "Admin"; this.db.child(`structures_data/${sid}/audit_logs`).push({ date: new Date().toLocaleString('it-IT'), timestamp: Date.now(), action: 'MODIFICA TURNI', details: `Aggiornato planning di [${opNick}] - ${document.getElementById('weekLabel').innerText}`, operator: authUser });
+                this.renderGrid(); 
+            });
+        },
+        generateSmartPlanning: function() {
+            const sid = document.getElementById('selStruct').value; const opNick = document.getElementById('selOp').value; if(!sid || !opNick) return this.showToast("Seleziona prima l'operatore!");
+            if(!confirm(`Generare planning per [${opNick}] basato sulle preferenze? I turni attuali andranno persi.`)) return;
+            let pref = 'qualsiasi'; let opUser = Object.values(this.allUsers).find(u => u.nick === opNick && u.structureId === sid); if(opUser && opUser.pref_turni) pref = opUser.pref_turni;
+            const dayOfWeek = this.currentDate.getDay(); const diffToMonday = this.currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); const startOfWeek = new Date(this.currentDate); startOfWeek.setDate(diffToMonday);
+            const dbTurniRef = this.db.child(`structures_data/${sid}/turni`); let updatePromises = [];
+            for(let i=0; i<7; i++) {
+                const currentDay = new Date(startOfWeek); currentDay.setDate(startOfWeek.getDate() + i); const dateStr = `${currentDay.getFullYear()}-${String(currentDay.getMonth()+1).padStart(2,'0')}-${String(currentDay.getDate()).padStart(2,'0')}`;
+                const refDayUser = dbTurniRef.child(dateStr).child(opNick);
+                if(i === 6) { updatePromises.push(refDayUser.set({ type: 'libero' })); } 
+                else { let s1, e1, s2="", e2=""; if (pref === 'mattina') { s1 = "09:00"; e1 = "14:00"; } else if (pref === 'pomeriggio') { s1 = "14:00"; e1 = "20:00"; } else { s1 = "09:00"; e1 = "13:00"; s2 = "15:00"; e2 = "19:00"; } updatePromises.push(refDayUser.set({ type: 'lavoro', start: s1, end: e1, start2: s2, end2: e2 })); }
+            }
+            Promise.all(updatePromises).then(() => { this.showToast("✅ Planning Generato con AI!"); this.renderGrid(); });
+        },
+        printTurniPDF: function() {
+            const sid = document.getElementById('selStruct').value; const opNick = document.getElementById('selOp').value; if(!sid || !opNick) return this.showToast("Seleziona prima l'operatore da stampare.");
+            const dayOfWeek = this.currentDate.getDay(); const diffToMonday = this.currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); const startOfWeek = new Date(this.currentDate); startOfWeek.setDate(diffToMonday); const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate() + 6); const dateRangeStr = `Dal ${startOfWeek.toLocaleDateString('it-IT')} al ${endOfWeek.toLocaleDateString('it-IT')}`;
+            this.db.child(`structures_data/${sid}/turni`).once('value').then(snap => {
+                const allTurni = snap.val() || {};
+                let printHtml = `<!DOCTYPE html><html><head><title>Turni ${opNick}</title><style>body { font-family: Arial, sans-serif; padding: 30px; color: #333; } h1 { color: #000; text-transform: uppercase; margin-bottom: 5px; } h3 { color: #666; margin-top: 0; margin-bottom: 30px; } table { width: 100%; border-collapse: collapse; margin-top: 20px; } th, td { border: 1px solid #ccc; padding: 15px; text-align: left; } th { background: #f8f9fa; text-transform: uppercase; font-size: 14px; } .lavoro { color: #10b981; font-weight: bold; } .riposo { color: #94a3b8; } .malattia { color: #ef4444; font-weight: bold; } .ferie { color: #3b82f6; font-weight: bold; }</style></head><body><h1>Planning Settimanale: ${opNick}</h1><h3>${dateRangeStr}</h3><table><thead><tr><th>Giorno</th><th>Data</th><th>Stato / Turno</th><th>Dettagli Orari</th></tr></thead><tbody>`;
+                for(let i=0; i<7; i++) {
+                    const currentDay = new Date(startOfWeek); currentDay.setDate(startOfWeek.getDate() + i); const dateStr = `${currentDay.getFullYear()}-${String(currentDay.getMonth()+1).padStart(2,'0')}-${String(currentDay.getDate()).padStart(2,'0')}`; const dayName = currentDay.toLocaleDateString('it-IT', { weekday: 'long' });
+                    let shift = allTurni[dateStr] && allTurni[dateStr][opNick] ? allTurni[dateStr][opNick] : null; let type = shift ? shift.type : (i===6 ? 'libero' : 'lavoro'); let stato = 'In Turno SPA'; let cssCls = 'lavoro'; let orari = '-';
+                    if(type === 'lavoro') { const s1 = shift && shift.start ? shift.start : "09:00"; const e1 = shift && shift.end ? shift.end : "18:00"; orari = `${s1} - ${e1}`; if(shift && shift.start2 && shift.end2) orari += ` <br> ${shift.start2} - ${shift.end2}`; } 
+                    else if(type === 'malattia') { stato = 'Malattia'; cssCls = 'malattia'; } else if(type === 'ferie') { stato = 'Ferie/Permesso'; cssCls = 'ferie'; } else if(type === 'libero') { stato = 'Riposo / Libero'; cssCls = 'riposo'; }
+                    printHtml += `<tr><td style="text-transform:capitalize; font-weight:bold;">${dayName}</td><td>${currentDay.toLocaleDateString('it-IT')}</td><td class="${cssCls}">${stato}</td><td>${orari}</td></tr>`;
+                }
+                printHtml += `</tbody></table><div style="margin-top:50px; font-size:12px; color:#999;">Generato dal sistema TOUCH WELNESS</div></body></html>`;
+                const printWin = window.open('', '', 'width=900,height=700'); printWin.document.write(printHtml); printWin.document.close(); printWin.focus(); setTimeout(() => { printWin.print(); printWin.close(); }, 500);
+            });
+        }
+    };
+    window.onload = function() { window.turniApp.init(); };
+</script>
+</body>
+</html>

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Area Riservata - TOUCH WELNESS</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="Menu.js"></script>
+<style>
+  :root { 
+      --bg-body: #0f172a; --bg-panel: #1e293b; --border-line: #334155; 
+      --text-main: #f8fafc; --text-muted: #94a3b8; 
+      --accent: #38bdf8; --gold: #fbbf24; --green: #10b981; --red: #ef4444; 
+  }
+  :root.light-theme {
+      --bg-body: #f8fafc; --bg-panel: #ffffff; --border-line: #e2e8f0;
+      --text-main: #0f172a; --text-muted: #64748b;
+  }
+
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, sans-serif; background: var(--bg-body); margin: 0; display: flex; flex-direction: column; height: 100vh; color: var(--text-main); transition: 0.3s; }
+  
+  .navbar { background: var(--bg-body); color: var(--text-main); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 20; border-bottom: 1px solid var(--border-line); width: 100%; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  .btn-menu { background: var(--gold); color: #000; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 900; cursor: pointer; display:flex; align-items:center; gap:5px; font-size: 13px; box-shadow: 0 3px 0 #b45309; transition:0.2s;}
+  .btn-menu:active { transform: translateY(3px); box-shadow: none; }
+
+  .main-content { flex: 1; padding: 20px; overflow-y: auto; position: relative; max-width: 900px; margin: 0 auto; width: 100%; }
+  
+  .tabs-header { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-line); overflow-x: auto; padding-bottom:5px; }
+  .tab-btn { padding: 10px 15px; background: none; border: none; cursor: pointer; font-weight: bold; color: var(--text-muted); border-bottom: 3px solid transparent; white-space: nowrap; transition: 0.2s; font-size: 14px; }
+  .tab-btn:hover { color: var(--text-main); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fade 0.3s ease; }
+  @keyframes fade { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  .card { background: var(--bg-panel); border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 25px; border: 1px solid var(--border-line); }
+  h2 { margin-top: 0; color: var(--gold); display:flex; justify-content:space-between; align-items:center; font-size: 20px; border-bottom: 2px solid var(--border-line); padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; }
+
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
+  .form-input { width: 100%; padding: 12px; border: 1px solid var(--border-line); border-radius: 8px; font-size: 14px; background: var(--bg-body); color: var(--text-main); color-scheme: dark; outline:none; transition: 0.2s; }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3); }
+
+  .btn-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.2s; white-space: nowrap; width: 100%; font-size: 14px; }
+  .btn-action:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+  .btn-outline { background: transparent; border: 1px solid var(--border-line); color: var(--text-main); }
+  
+  .info-text { font-size: 14px; color: var(--text-main); background: var(--bg-body); padding: 12px; border-radius: 8px; border: 1px solid var(--border-line); font-weight: bold; }
+
+  /* DASHBOARD COMPENSI */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
+  .stat-card { padding: 20px 15px; text-align: center; background: var(--bg-body); border-radius: 12px; border: 1px solid var(--border-line); border-bottom: 4px solid var(--accent); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  .stat-val { font-size: 32px; font-weight: 900; color: var(--text-main); margin: 5px 0; }
+  .stat-lbl { font-size: 11px; color: var(--text-muted); font-weight: bold; text-transform: uppercase; }
+
+  /* AGENDA ODIERNA */
+  .agenda-item { background: var(--bg-body); border: 1px solid var(--border-line); border-left: 4px solid var(--gold); border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: 0.2s; }
+  .agenda-item.eseguito { border-left-color: var(--green); opacity: 0.7; }
+  .agenda-time { font-size: 22px; font-weight: 900; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+  .agenda-details { text-align: right; }
+  .agenda-details b { color: var(--accent); display: block; font-size: 15px; text-transform: uppercase;}
+  .agenda-details span { color: var(--text-muted); font-size: 12px; font-weight: bold; }
+
+  /* NUOVO CALENDARIO TURNI PREMIUM */
+  .shift-item { display: flex; align-items: center; background: var(--bg-panel); padding: 12px 15px; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border: 1px solid var(--border-line); transition: transform 0.2s; border-left: 6px solid var(--border-line); }
+  .shift-item:hover { transform: translateX(5px); border-color: var(--accent); }
+  .shift-date-box { display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 12px; min-width: 70px; border: 1px solid rgba(255,255,255,0.05); }
+  .shift-date-box .day-num { font-size: 24px; font-weight: 900; color: var(--text-main); line-height: 1; }
+  .shift-date-box .day-name { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: bold; margin-top: 4px; }
+  .shift-details { flex: 1; margin-left: 20px; text-align: right; display: flex; flex-direction: column; justify-content: center; }
+  .shift-status-icon { font-size: 28px; opacity: 0.2; position: absolute; right: 20px; }
+
+  #toastBlue { visibility: hidden; min-width: 250px; background: var(--accent); color: #0f172a; text-align: center; border-radius: 8px; padding: 16px; position: fixed; right: 20px; bottom: 20px; z-index: 9999; font-size: 13px; font-weight: bold; opacity: 0; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+  #toastBlue.show { visibility: visible; opacity: 1; bottom: 40px; }
+</style>
+<script>
+    if(localStorage.getItem('tw_theme') === 'light') { document.documentElement.classList.add('light-theme'); }
+</script>
+</head>
+<body>
+
+<div id="toastBlue">Notifica</div>
+
+<div class="navbar">
+  <div style="font-weight:900; letter-spacing:1px; color:var(--accent);">AREA RISERVATA</div>
+  <button class="btn-menu" onclick="window.toggleMenu(event)">MENU <i class="material-icons-round">menu</i></button>
+</div>
+
+<div class="main-content">
+    
+    <div style="margin-bottom:20px">
+    <select id="operatorSelect" class="form-input" style="background:var(--bg-body); color:var(--gold); font-weight:bold; font-size:16px; border-color:var(--text-muted);" onchange="changeOperator()">
+        <option value="">-- Caricamento Operatori --</option>
+    </select>
+</div>
+<div class="tabs-header">
+        <button class="tab-btn active" onclick="openTab('agenda', this)"><i class="material-icons-round" style="font-size:16px; vertical-align:middle">view_timeline</i> Agenda di Oggi</button>
+        <button class="tab-btn" onclick="openTab('turni', this)"><i class="material-icons-round" style="font-size:16px; vertical-align:middle">event_note</i> I Miei Turni</button>
+        <button class="tab-btn" onclick="openTab('commissions', this)"><i class="material-icons-round" style="font-size:16px; vertical-align:middle">payments</i> Compensi</button>
+        <button class="tab-btn" onclick="openTab('profile', this)"><i class="material-icons-round" style="font-size:16px; vertical-align:middle">person</i> Profilo</button>
+    </div>
+
+    <div id="tab-agenda" class="tab-content active">
+        <div class="card">
+            <h2>I Miei Appuntamenti <span id="todayDateStr" style="font-size:13px; color:var(--text-muted); font-weight:normal; text-transform:none;"></span></h2>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:0; margin-bottom:20px;">Gli appuntamenti si aggiornano in tempo reale dalla Reception.</p>
+            <div id="operatorAgendaList"></div>
+        </div>
+    </div>
+
+    <div id="tab-turni" class="tab-content">
+        <div class="card">
+            <h2>Il Mio Planning Turni</h2>
+            
+            <div style="display:flex; gap:10px; margin-bottom:20px; background:var(--bg-body); padding:15px; border-radius:12px; border:1px solid var(--border-line); align-items:center; flex-wrap:wrap;">
+                <b style="color:var(--gold);"><i class="material-icons-round" style="vertical-align:middle">event</i> Filtro:</b>
+                <select id="turniMonth" class="form-input" style="width:130px; margin:0; padding:8px;" onchange="sysJumpToMonthTurni()">
+                    <option value="0">Gennaio</option><option value="1">Febbraio</option><option value="2">Marzo</option><option value="3">Aprile</option>
+                    <option value="4">Maggio</option><option value="5">Giugno</option><option value="6">Luglio</option><option value="7">Agosto</option>
+                    <option value="8">Settembre</option><option value="9">Ottobre</option><option value="10">Novembre</option><option value="11">Dicembre</option>
+                </select>
+                <select id="turniYear" class="form-input" style="width:90px; margin:0; padding:8px;" onchange="sysJumpToMonthTurni()">
+                    <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+                </select>
+                <button class="btn-action btn-outline" style="width:auto; padding:8px 15px; margin-left:auto;" onclick="sysJumpToTodayTurni()">OGGI</button>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px dashed var(--border-line); padding-bottom:15px;">
+                 <button class="btn-action btn-outline" style="width:auto; padding:8px 15px; border-color:var(--border-line);" onclick="changeWeek(-1)"><i class="material-icons-round">chevron_left</i> Prec.</button>
+                 <div id="weekRangeLabel" style="font-weight:bold; color:var(--text-main); font-size:14px; text-transform:uppercase;">...</div>
+                 <button class="btn-action btn-outline" style="width:auto; padding:8px 15px; border-color:var(--border-line);" onclick="changeWeek(1)">Succ. <i class="material-icons-round">chevron_right</i></button>
+            </div>
+            
+            <div id="operatorShiftsList">
+                <div class="info-text" style="text-align:center; color:var(--text-muted);">Caricamento turni...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-commissions" class="tab-content">
+    <div id="compensi-PasswordBlock" class="card" style="text-align:center;">
+        <i class="material-icons-round" style="font-size:48px; color:var(--gold); margin-bottom:15px;">lock</i>
+        <h2 style="justify-content:center; border:none; margin-bottom:10px;">Area Protetta</h2>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Inserisci la password dell'operatore per visualizzare i compensi</p>
+        <input type="password" id="compensiPwdInput" class="form-input" style="text-align:center; max-width:300px; margin:0 auto 20px;" placeholder="Password" onkeydown="if(event.key==='Enter') unlockCompensi()">
+        <button class="btn-action" style="max-width:300px; margin:0 auto; display:flex;" onclick="unlockCompensi()">SBLOCCA</button>
+    </div>
+    <div id="compensi-DataBlock" style="display:none;">
+        <div class="card">
+            <h2>Dashboard Compensi Netti</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Il resoconto mostra i compensi netti spettanti all'operatore, con IVA già scorporata. Vengono calcolati solo gli appuntamenti segnati come <b>Eseguiti</b> e <b>Pagati</b> in Reception.</p>
+            
+            <div style="display:flex; gap:10px; margin-bottom:20px; background:var(--bg-body); padding:15px; border-radius:12px; border:1px solid var(--border-line); align-items:center; flex-wrap:wrap;">
+                <b style="color:var(--gold);"><i class="material-icons-round" style="vertical-align:middle">calendar_month</i> Periodo:</b>
+                <select id="cYear" class="form-input" style="width:100px; margin:0;" onchange="calculateCommissions()"><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option></select>
+                <select id="cMonth" class="form-input" style="width:150px; margin:0;" onchange="calculateCommissions()">
+                    <option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option><option value="04">Aprile</option>
+                    <option value="05">Maggio</option><option value="06">Giugno</option><option value="07">Luglio</option><option value="08">Agosto</option>
+                    <option value="09">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option>
+                </select>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card" style="border-bottom-color:#94a3b8;">
+                    <div class="stat-lbl">Fisso Mensile</div>
+                    <div class="stat-val" id="valFisso">0 €</div>
+                </div>
+                <div class="stat-card" style="border-bottom-color:var(--accent);">
+                    <div class="stat-lbl">Netto Massaggi</div>
+                    <div class="stat-val" id="valMassaggi" style="color:var(--accent);">0 €</div>
+                </div>
+                <div class="stat-card" style="border-bottom-color:#db2777;">
+                    <div class="stat-lbl">Netto Accessi SPA</div>
+                    <div class="stat-val" id="valSpa" style="color:#db2777;">0 €</div>
+                </div>
+            </div>
+
+            <div style="background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.3); border-radius:12px; padding:25px; text-align:center;">
+                <div style="font-size:14px; color:var(--green); font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Totale Compenso Netto Finale</div>
+                <div id="valTotale" style="font-size:42px; font-weight:900; color:var(--text-main);">0.00 €</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-profile" class="tab-content">
+        <div class="card">
+            <h2>Struttura Operativa</h2>
+            <div id="structuresContainer" style="border:1px solid var(--border-line); border-radius:12px; overflow:hidden; margin-bottom:30px;">
+                <div style="padding:15px; background:var(--bg-body); font-weight:bold; color:var(--text-main); display:flex; align-items:center; gap:10px;" id="assignedStructName">
+                    <i class="material-icons-round" style="color:var(--accent);">apartment</i> Caricamento in corso...
+                </div>
+            </div>
+
+            <h2>Dati Anagrafici</h2>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom: 30px;">
+                <div><label>Nome</label><div class="info-text" id="p_nome">-</div></div>
+                <div><label>Cognome</label><div class="info-text" id="p_cognome">-</div></div>
+                <div><label>Telefono</label><div class="info-text" id="p_tel">-</div></div>
+                <div><label>Email</label><div class="info-text" id="p_email">-</div></div>
+            </div>
+            
+            <h2 style="border-top: 1px solid var(--border-line); padding-top: 20px;">Sicurezza</h2>
+            <div class="form-group"><label>Username d'Accesso (Fisso)</label><div class="info-text" id="p_user" style="color:var(--gold);">-</div></div>
+            <div class="form-group"><label>Aggiorna Password</label><input type="password" id="newPassword" class="form-input" placeholder="Digita la nuova password"></div>
+            <button class="btn-action btn-outline" style="color:var(--gold); border-color:var(--gold);" onclick="changePassword()"><i class="material-icons-round">lock_reset</i> SALVA NUOVA PASSWORD</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const fbConfig = {
+        apiKey: "AIzaSyCrDuK7SWHdbzrJR-pNpxmRwGnZgV2Dd2Y",
+        authDomain: "touch-welness-massage.firebaseapp.com",
+        databaseURL: "https://touch-welness-massage-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "touch-welness-massage",
+        storageBucket: "touch-welness-massage.firebasestorage.app"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+
+    const currentUserNick = localStorage.getItem("tw_user");
+    const currentStructId = localStorage.getItem("tw_structure_id");
+    let userKey = null;
+    let userData = {};
+    let structureName = "";
+    
+    // Variabile per la gestione della settimana corrente nel calendario turni
+    let currentWeekDate = new Date();
+
+    if(!currentUserNick || !currentStructId) window.location.href = "login.html";
+
+    function showToast(msg) { const t = document.getElementById("toastBlue"); t.innerText = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 3000); }
+
+    
+    let allUsersCache = {};
+    let isCompensiUnlocked = false;
+
+    function openTab(tabId, el) {
+        document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+        
+        if(tabId === 'commissions' && !isCompensiUnlocked) {
+            document.getElementById('compensi-PasswordBlock').style.display = 'block';
+            document.getElementById('compensi-DataBlock').style.display = 'none';
+        } else if(tabId === 'commissions') {
+            document.getElementById('compensi-PasswordBlock').style.display = 'none';
+            document.getElementById('compensi-DataBlock').style.display = 'block';
+        }
+
+        document.getElementById('tab-' + tabId).classList.add('active');
+        el.classList.add('active');
+    }
+
+    function unlockCompensi() {
+        const pwd = document.getElementById('compensiPwdInput').value;
+        if(!pwd) return showToast("Inserisci la password dell'operatore");
+        if(!userData) return showToast("Errore caricamento operatore");
+        if(userData.pass === pwd || userData.password === pwd) {
+            isCompensiUnlocked = true;
+            document.getElementById('compensi-PasswordBlock').style.display = 'none';
+            document.getElementById('compensi-DataBlock').style.display = 'block';
+            loadCompensi();
+            showToast("Area sbloccata!");
+        } else {
+            showToast("Password errata");
+        }
+    }
+
+    function changeOperator() {
+        const sel = document.getElementById('operatorSelect');
+        const selectedUID = sel.value;
+        if(!selectedUID || !allUsersCache[selectedUID]) return;
+        
+        userKey = selectedUID;
+        userData = allUsersCache[userKey];
+
+        isCompensiUnlocked = false;
+        if (document.getElementById('compensiPwdInput')) document.getElementById('compensiPwdInput').value = "";
+        if (document.getElementById('compensi-PasswordBlock')) document.getElementById('compensi-PasswordBlock').style.display = 'block';
+        if (document.getElementById('compensi-DataBlock')) document.getElementById('compensi-DataBlock').style.display = 'none';
+        
+        updateUIWithOperator();
+    }
+
+    function updateUIWithOperator() {
+        document.getElementById('p_nome').innerText = userData.name || '-';
+        document.getElementById('p_cognome').innerText = userData.surname || '-';
+        document.getElementById('p_tel').innerText = userData.phone || '-';
+        document.getElementById('p_email').innerText = userData.email || '-';
+        document.getElementById('p_user').innerText = userData.nick || '-';
+        
+        loadTodayAgenda();
+        loadMyShifts();
+        if(isCompensiUnlocked) loadCompensi();
+    }
+
+    function loadCompensi() {
+        calculateCommissions();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const td = new Date();
+        document.getElementById('cYear').value = td.getFullYear();
+        document.getElementById('cMonth').value = String(td.getMonth() + 1).padStart(2, '0');
+
+        firebase.database().ref('MASTER_ADMIN_DB/users').once('value').then(snap => { const users = snap.val() || {}; allUsersCache = users; let selHtml = ""; let matchedUid = null; for(let key in users) { if(users[key].structureId === currentStructId && users[key].attivo !== false && users[key].eliminato !== true && users[key].eliminato !== "true") { const nameDisp = (users[key].name || "") + " " + (users[key].surname || "") + " (" + (users[key].nick || "ignoto") + ")"; selHtml += "<option value='" + key + "'>" + nameDisp + "</option>"; if(users[key].nick === currentUserNick) { matchedUid = key; } } } const sel = document.getElementById('operatorSelect'); if(sel) { sel.innerHTML = selHtml || "<option value=''>Nessun operatore</option>"; if(matchedUid) sel.value = matchedUid; } if(matchedUid) { userKey = matchedUid; userData = allUsersCache[userKey]; } else if(sel.value) { userKey = sel.value; userData = allUsersCache[userKey]; } if(userData) { updateUIWithOperator(); firebase.database().ref('MASTER_ADMIN_DB/structures/' + currentStructId).once('value').then(sSnap => { const sData = sSnap.val() || {}; structureName = sData.name || "Struttura Non Identificata"; document.getElementById('assignedStructName').innerHTML = "<i class='material-icons-round' style='color:var(--accent);'>apartment</i> " + structureName; }); } else { showToast("Errore di caricamento Profilo."); } });
+    });
+
+    function changePassword() {
+        const pwd = document.getElementById('newPassword').value.trim();
+        if(!pwd || pwd.length < 5) return showToast("La password deve contenere almeno 5 caratteri.");
+        if(!userKey) return showToast("Errore di identificazione utente.");
+
+        firebase.database().ref('MASTER_ADMIN_DB/users/' + userKey).update({ pass: pwd }).then(() => {
+            showToast("Password aggiornata con successo!");
+            document.getElementById('newPassword').value = "";
+        });
+    }
+
+    // ==========================================
+    // AGENDA ODIERNA OPERATORE
+    // ==========================================
+    function loadTodayAgenda() {
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        
+        const options = { weekday: 'long', day: 'numeric', month: 'long' };
+        document.getElementById('todayDateStr').innerText = "- " + d.toLocaleDateString('it-IT', options).toUpperCase();
+        
+        const list = document.getElementById('operatorAgendaList');
+        if(list) {
+            list.innerHTML = "<div class='info-text' style='text-align:center; color:var(--text-muted); font-weight:normal; border-style:dashed;'>Caricamento appuntamenti...</div>";
+        }
+        
+        firebase.database().ref('MASTER_ADMIN_DB/structures_data/' + currentStructId + '/app/' + todayStr).on('value', snap => {
+            const apps = snap.val() || [];
+            const appsArray = Array.isArray(apps) ? apps : Object.values(apps);
+            
+            const myApps = appsArray.filter(a => a && (a.op === userData.nick || a.op === userData.name));
+            myApps.sort((a, b) => (a.ora || "00:00").localeCompare(b.ora || "00:00"));
+            
+            if(!list) return;
+            if(myApps.length === 0) {
+                list.innerHTML = "<div class='info-text' style='text-align:center; color:var(--text-muted); font-weight:normal; border-style:dashed;'>Non hai appuntamenti assegnati per oggi.</div>";
+                return;
+            }
+            
+            let html = "";
+            myApps.forEach(a => {
+                const isEseguito = a.eseguito === true;
+                const icon = isEseguito ? "check_circle" : "schedule";
+                const color = isEseguito ? "var(--green)" : "var(--gold)";
+                const styleClass = isEseguito ? "eseguito" : "";
+                
+                html += `<div class="agenda-item ${styleClass}">
+                    <div class="agenda-time" style="color:${color}">
+                        <i class="material-icons-round">${icon}</i> ${a.ora || '-'}
+                    </div>
+                    <div class="agenda-details">
+                        <b>Cabina ${a.cab || '?'} - ${a.cog || 'Cliente'}</b>
+                        <span>${a.serv || 'Trattamento'} (${a.dur || 30} min)</span>
+                        ${a.note ? `<div style="font-size:11px; color:var(--text-muted); margin-top:5px; font-style:italic;">Nota: ${a.note}</div>` : ''}
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        });
+    }
+
+    // ==========================================
+    // CALENDARIO TURNI PREMIUM
+    // ==========================================
+    function changeWeek(offset) {
+        currentWeekDate.setDate(currentWeekDate.getDate() + (offset * 7));
+        loadMyShifts();
+    }
+
+    function sysJumpToMonthTurni() {
+        const m = parseInt(document.getElementById('turniMonth').value);
+        const y = parseInt(document.getElementById('turniYear').value);
+        currentWeekDate = new Date(y, m, 1); // Va al primo giorno del mese/anno selezionati
+        loadMyShifts();
+    }
+
+    function sysJumpToTodayTurni() {
+        currentWeekDate = new Date();
+        loadMyShifts();
+    }
+
+    function loadMyShifts() {
+        const dayOfWeek = currentWeekDate.getDay(); // 0 = Domenica
+        const diffToMonday = currentWeekDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        
+        const startOfWeek = new Date(currentWeekDate);
+        startOfWeek.setDate(diffToMonday);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        
+        // Aggiorna etichette Mese e Anno per sincronizzarsi
+        document.getElementById('turniMonth').value = startOfWeek.getMonth();
+        document.getElementById('turniYear').value = startOfWeek.getFullYear();
+
+        document.getElementById('weekRangeLabel').innerText = `Dal ${startOfWeek.toLocaleDateString('it-IT')} al ${endOfWeek.toLocaleDateString('it-IT')}`;
+        
+        const list = document.getElementById('operatorShiftsList');
+        list.innerHTML = "<div class='info-text' style='text-align:center; color:var(--text-muted); border-style:dashed;'>Sincronizzazione turni...</div>";
+        
+        firebase.database().ref('MASTER_ADMIN_DB/structures_data/' + currentStructId + '/turni').once('value').then(snap => {
+            const allTurni = snap.val() || {};
+            let html = "";
+            
+            const todayStrCheck = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+
+            for(let i=0; i<7; i++) {
+                const currentDay = new Date(startOfWeek);
+                currentDay.setDate(startOfWeek.getDate() + i);
+                
+                const dateStr = `${currentDay.getFullYear()}-${String(currentDay.getMonth()+1).padStart(2,'0')}-${String(currentDay.getDate()).padStart(2,'0')}`;
+                
+                // Formattazione data bellissima per la Card
+                const dayNum = currentDay.getDate();
+                const dayNameShort = currentDay.toLocaleDateString('it-IT', { weekday: 'short' });
+                
+                let myShift = null;
+                if(allTurni[dateStr] && allTurni[dateStr][userData.nick]) {
+                    myShift = allTurni[dateStr][userData.nick];
+                }
+                
+                let shiftTitle = "Riposo / Libero";
+                let shiftSub = "Nessun turno assegnato";
+                let shiftColor = "var(--border-line)";
+                let bgIcon = "bedtime";
+                
+                if(myShift) {
+                    if(myShift.type === 'lavoro') {
+                        shiftTitle = "In Turno SPA";
+                        shiftSub = `${myShift.start} - ${myShift.end}`;
+                        if(myShift.start2 && myShift.end2) shiftSub += ` | ${myShift.start2} - ${myShift.end2}`;
+                        shiftColor = "var(--accent)";
+                        bgIcon = "work";
+                    } else if (myShift.type === 'malattia') {
+                        shiftTitle = "Assenza per Malattia";
+                        shiftSub = "Certificato Medico";
+                        shiftColor = "var(--red)";
+                        bgIcon = "sick";
+                    } else if (myShift.type === 'ferie') {
+                        shiftTitle = "Ferie / Permesso";
+                        shiftSub = "Assenza approvata";
+                        shiftColor = "var(--green)";
+                        bgIcon = "flight_takeoff";
+                    }
+                }
+                
+                // Evidenzia se è oggi
+                const isToday = (dateStr === todayStrCheck);
+                const bgStyle = isToday ? "background:rgba(56, 189, 248, 0.05); border-color:var(--accent);" : "";
+                const shadowPulse = isToday ? "box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);" : "";
+
+                html += `
+                <div class="shift-item" style="border-left-color:${shiftColor}; ${bgStyle} ${shadowPulse}">
+                    <div class="shift-date-box" style="border-bottom:3px solid ${shiftColor}">
+                        <div class="day-num">${dayNum}</div>
+                        <div class="day-name">${dayNameShort}</div>
+                    </div>
+                    <div class="shift-details">
+                        <b style="color:${shiftColor}; font-size:16px; margin-bottom:2px; display:block;">${shiftTitle}</b>
+                        <span style="color:var(--text-muted); font-size:12px; font-weight:bold;">${shiftSub}</span>
+                    </div>
+                </div>`;
+            }
+            list.innerHTML = html;
+        });
+    }
+
+    // ==========================================
+    // COMPENSI FINANZIARI
+    // ==========================================
+    function calculateCommissions() {
+        if(!userData) return;
+        
+        const fYear = document.getElementById('cYear').value;
+        const fMonth = document.getElementById('cMonth').value;
+        const targetPrefix = `${fYear}-${fMonth}`;
+        
+        const comm = userData.commissions || {};
+        const fisso = parseFloat(comm.fisso) || 0;
+        const ivaPerc = parseFloat(comm.iva) || 0; 
+        const percMassaggi = parseFloat(comm.op_massaggi) || 0; 
+        const percSpa = parseFloat(comm.op_spa) || 0; 
+
+        firebase.database().ref('MASTER_ADMIN_DB/structures_data/' + currentStructId + '/app').once('value').then(snap => {
+            const appsObj = snap.val() || {};
+            let totMassaggiNetto = 0;
+            let totSpaNetto = 0;
+
+            for(const dateKey in appsObj) {
+                if(dateKey.startsWith(targetPrefix)) {
+                    appsObj[dateKey].forEach(a => {
+                        if(a.eseguito === true && a.pagato === true && 
+                          (a.op === userData.nick || a.op === userData.name)) {
+                            
+                            let priceLordo = parseFloat(a.price) || parseFloat(a.prezzo) || 0;
+                            let priceNetto = priceLordo / (1 + (ivaPerc / 100));
+
+                            const servName = (a.serv || "").toLowerCase();
+                            const isSpa = servName.includes('spa') || servName.includes('percors');
+
+                            if(isSpa) totSpaNetto += priceNetto * (percSpa / 100);
+                            else totMassaggiNetto += priceNetto * (percMassaggi / 100);
+                        }
+                    });
+                }
+            }
+
+            const totaleFinale = fisso + totMassaggiNetto + totSpaNetto;
+
+            document.getElementById('valFisso').innerText = fisso.toFixed(2) + " €";
+            document.getElementById('valMassaggi').innerText = totMassaggiNetto.toFixed(2) + " €";
+            document.getElementById('valSpa').innerText = totSpaNetto.toFixed(2) + " €";
+            document.getElementById('valTotale').innerText = totaleFinale.toFixed(2) + " €";
+        });
+    }
+
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Se siamo dentro un iframe modale
+        if (window !== window.parent) {
+            const nav = document.querySelector('.navbar');
+            if(nav) nav.style.display = 'none'; // Nascondi il menu superiore perché c'è già il pop-up
+            
+            // Opzionale: rendiamo lo sfondo trasparente per fonderci col modale
+            document.body.style.background = 'transparent';
+        }
+    });
+</script>
+
+</body>
+</html>
